@@ -6,7 +6,6 @@
  */
 
 import type { RackConfig, PlacedDevice } from '../state/types';
-import { getDevice } from '../data/devices';
 
 // Component file contents will be embedded at build time or fetched at runtime
 let componentCache: Map<string, string> | null = null;

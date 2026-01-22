@@ -13,7 +13,7 @@ export function RackToolbar() {
   const [isRendering, setIsRendering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [renderStatus, setRenderStatus] = useState<string | null>(null);
-  const [workerInitialized, setWorkerInitialized] = useState(false);
+  const [, setWorkerInitialized] = useState(false);
 
   const {
     config,

@@ -28,11 +28,8 @@ export async function initializeWorker(): Promise<void> {
 
   initPromise = new Promise((resolve, reject) => {
     try {
-      // Create the worker
-      // Note: In Vite, we need to use the special import syntax
-      worker = new Worker(new URL('./openscad-worker.ts', import.meta.url), {
-        type: 'module',
-      });
+      // Create the worker from the public folder (plain JS, no bundling needed)
+      worker = new Worker('/openscad-worker.js');
 
       // Handle messages from the worker
       worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
