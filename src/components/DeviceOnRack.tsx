@@ -45,9 +45,13 @@ interface DeviceOnRackProps {
 }
 
 export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRackProps) {
-  const { selectedDeviceId, selectDevice, updateDeviceMountType } = useRackStore();
+  const { config, selectedDeviceId, selectDevice, updateDeviceMountType } = useRackStore();
   const isSelected = selectedDeviceId === device.id;
   const [showMountMenu, setShowMountMenu] = useState(false);
+
+  // Determine which side the device is on (for split mode)
+  const isLeftSide = config.leftDevices.some((d) => d.id === device.id);
+  const isRightSide = config.rightDevices.some((d) => d.id === device.id);
 
   const dims = getPlacedDeviceDimensions(device);
 
@@ -180,6 +184,41 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
             style={{ pointerEvents: 'none', userSelect: 'none' }}
           >
             {MOUNT_TYPE_SHORT[device.mountType]}
+          </text>
+        </g>
+      )}
+      {/* Side indicator for split mode */}
+      {config.isSplit && (isLeftSide || isRightSide) && (
+        <g style={{ pointerEvents: 'none' }}>
+          {/* Side stripe on the edge */}
+          <rect
+            x={isLeftSide ? x : x + widthSvg - 4}
+            y={y}
+            width={4}
+            height={heightSvg}
+            fill={isLeftSide ? '#60a5fa' : '#f472b6'}
+            rx={isLeftSide ? 3 : 0}
+            ry={isLeftSide ? 3 : 0}
+          />
+          {/* Side badge */}
+          <rect
+            x={isLeftSide ? x - 1 : x + widthSvg - 13}
+            y={y - 10}
+            width={14}
+            height={10}
+            fill={isLeftSide ? '#3b82f6' : '#ec4899'}
+            rx={2}
+          />
+          <text
+            x={isLeftSide ? x + 6 : x + widthSvg - 6}
+            y={y - 4}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="white"
+            fontSize={7}
+            fontWeight="bold"
+          >
+            {isLeftSide ? 'L' : 'R'}
           </text>
         </g>
       )}

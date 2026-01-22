@@ -117,8 +117,13 @@ function App() {
       const device = getDevice(deviceId);
 
       if (device) {
-        // Add device at center
-        addDevice(deviceId, 0, 0, 'cage');
+        // Determine which side to add to in split mode
+        let side: 'left' | 'right' | undefined;
+        if (config.isSplit) {
+          // Default position (0) - if split is at 0 or positive, go left; if negative, go right
+          side = config.splitPosition >= 0 ? 'left' : 'right';
+        }
+        addDevice(deviceId, 0, 0, 'cage', side);
       }
       return;
     }

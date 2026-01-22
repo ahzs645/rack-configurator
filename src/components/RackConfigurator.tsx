@@ -134,11 +134,12 @@ export function RackConfigurator() {
   // Calculate split line position
   const splitLineX = config.splitPosition || 0; // 0 = center
 
-  // Handle split line drag
+  // Handle split line drag (only if not locked)
   const handleSplitMouseDown = useCallback((e: React.MouseEvent) => {
+    if (config.splitLocked) return;
     e.stopPropagation();
     setIsDraggingSplit(true);
-  }, []);
+  }, [config.splitLocked]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
@@ -277,58 +278,83 @@ export function RackConfigurator() {
         {/* Split line (when in split mode) */}
         {config.isSplit && (
           <g>
-            {/* Invisible wider hit area for dragging */}
-            <line
-              x1={rackToSvg(splitLineX, 0, view).x}
-              y1={rackBounds.y - 20}
-              x2={rackToSvg(splitLineX, 0, view).x}
-              y2={rackBounds.y + rackBounds.height + 20}
-              stroke="transparent"
-              strokeWidth={20}
-              className="cursor-ew-resize"
-              onMouseDown={handleSplitMouseDown}
-            />
+            {/* Invisible wider hit area for dragging (only if not locked) */}
+            {!config.splitLocked && (
+              <line
+                x1={rackToSvg(splitLineX, 0, view).x}
+                y1={rackBounds.y - 20}
+                x2={rackToSvg(splitLineX, 0, view).x}
+                y2={rackBounds.y + rackBounds.height + 20}
+                stroke="transparent"
+                strokeWidth={20}
+                className="cursor-ew-resize"
+                onMouseDown={handleSplitMouseDown}
+              />
+            )}
             {/* Visible split line */}
             <line
               x1={rackToSvg(splitLineX, 0, view).x}
               y1={rackBounds.y}
               x2={rackToSvg(splitLineX, 0, view).x}
               y2={rackBounds.y + rackBounds.height}
-              stroke={isDraggingSplit ? '#a78bfa' : '#8b5cf6'}
+              stroke={config.splitLocked ? '#f59e0b' : (isDraggingSplit ? '#a78bfa' : '#8b5cf6')}
               strokeWidth={isDraggingSplit ? 3 : 2}
-              strokeDasharray="8,4"
+              strokeDasharray={config.splitLocked ? 'none' : '8,4'}
               pointerEvents="none"
             />
-            {/* Drag handle indicator */}
+            {/* Drag handle indicator (or lock icon when locked) */}
             <rect
               x={rackToSvg(splitLineX, 0, view).x - 6}
               y={rackBounds.y + rackBounds.height / 2 - 15}
               width={12}
               height={30}
               rx={3}
-              fill={isDraggingSplit ? '#a78bfa' : '#8b5cf6'}
-              className="cursor-ew-resize"
+              fill={config.splitLocked ? '#f59e0b' : (isDraggingSplit ? '#a78bfa' : '#8b5cf6')}
+              className={config.splitLocked ? 'cursor-default' : 'cursor-ew-resize'}
               onMouseDown={handleSplitMouseDown}
             />
-            {/* Grip lines on handle */}
-            <line
-              x1={rackToSvg(splitLineX, 0, view).x - 2}
-              y1={rackBounds.y + rackBounds.height / 2 - 8}
-              x2={rackToSvg(splitLineX, 0, view).x - 2}
-              y2={rackBounds.y + rackBounds.height / 2 + 8}
-              stroke="white"
-              strokeWidth={1}
-              pointerEvents="none"
-            />
-            <line
-              x1={rackToSvg(splitLineX, 0, view).x + 2}
-              y1={rackBounds.y + rackBounds.height / 2 - 8}
-              x2={rackToSvg(splitLineX, 0, view).x + 2}
-              y2={rackBounds.y + rackBounds.height / 2 + 8}
-              stroke="white"
-              strokeWidth={1}
-              pointerEvents="none"
-            />
+            {config.splitLocked ? (
+              /* Lock icon when locked */
+              <g pointerEvents="none">
+                <rect
+                  x={rackToSvg(splitLineX, 0, view).x - 4}
+                  y={rackBounds.y + rackBounds.height / 2 - 2}
+                  width={8}
+                  height={6}
+                  fill="white"
+                  rx={1}
+                />
+                <path
+                  d={`M ${rackToSvg(splitLineX, 0, view).x - 2} ${rackBounds.y + rackBounds.height / 2 - 2}
+                      v -3 a 2 2 0 0 1 4 0 v 3`}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth={1.5}
+                />
+              </g>
+            ) : (
+              /* Grip lines on handle when unlocked */
+              <>
+                <line
+                  x1={rackToSvg(splitLineX, 0, view).x - 2}
+                  y1={rackBounds.y + rackBounds.height / 2 - 8}
+                  x2={rackToSvg(splitLineX, 0, view).x - 2}
+                  y2={rackBounds.y + rackBounds.height / 2 + 8}
+                  stroke="white"
+                  strokeWidth={1}
+                  pointerEvents="none"
+                />
+                <line
+                  x1={rackToSvg(splitLineX, 0, view).x + 2}
+                  y1={rackBounds.y + rackBounds.height / 2 - 8}
+                  x2={rackToSvg(splitLineX, 0, view).x + 2}
+                  y2={rackBounds.y + rackBounds.height / 2 + 8}
+                  stroke="white"
+                  strokeWidth={1}
+                  pointerEvents="none"
+                />
+              </>
+            )}
             {/* Left/Right labels */}
             <text
               x={rackToSvg(splitLineX - 40, 0, view).x}

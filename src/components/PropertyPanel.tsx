@@ -10,14 +10,29 @@ export function PropertyPanel() {
     updateDevicePosition,
     updateDeviceMountType,
     removeDevice,
+    moveDeviceToSide,
   } = useRackStore();
 
-  // Search all device lists for the selected device
-  const selectedDevice = selectedDeviceId
-    ? config.devices.find((d) => d.id === selectedDeviceId) ||
-      config.leftDevices.find((d) => d.id === selectedDeviceId) ||
-      config.rightDevices.find((d) => d.id === selectedDeviceId)
-    : null;
+  // Search all device lists for the selected device and determine which side it's on
+  let selectedDevice = null;
+  let deviceSide: 'main' | 'left' | 'right' = 'main';
+
+  if (selectedDeviceId) {
+    selectedDevice = config.devices.find((d) => d.id === selectedDeviceId);
+    if (selectedDevice) {
+      deviceSide = 'main';
+    } else {
+      selectedDevice = config.leftDevices.find((d) => d.id === selectedDeviceId);
+      if (selectedDevice) {
+        deviceSide = 'left';
+      } else {
+        selectedDevice = config.rightDevices.find((d) => d.id === selectedDeviceId);
+        if (selectedDevice) {
+          deviceSide = 'right';
+        }
+      }
+    }
+  }
 
   if (!selectedDevice) {
     return null;
@@ -51,6 +66,32 @@ export function PropertyPanel() {
           Remove
         </button>
       </div>
+
+      {/* Split side selector (only in split mode) */}
+      {config.isSplit && (
+        <div className="flex gap-1 mb-3">
+          <button
+            onClick={() => moveDeviceToSide(selectedDevice.id, 'left')}
+            className={`flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+              deviceSide === 'left'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+            }`}
+          >
+            Left Half
+          </button>
+          <button
+            onClick={() => moveDeviceToSide(selectedDevice.id, 'right')}
+            className={`flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+              deviceSide === 'right'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+            }`}
+          >
+            Right Half
+          </button>
+        </div>
+      )}
 
       {/* Position and Mount controls */}
       <div className="flex gap-2 mb-2">

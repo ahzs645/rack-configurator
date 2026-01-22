@@ -102,6 +102,7 @@ export interface RackConfig {
   // Split panel configuration
   isSplit: boolean;
   splitPosition: number;  // 0 = auto center
+  splitLocked: boolean;   // Lock split line from being dragged
   renderMode: RenderMode;
 
   // Placed devices (for single piece or when isSplit=false)
@@ -152,6 +153,7 @@ export const DEFAULT_RACK_CONFIG: RackConfig = {
   showLabels: true,
   isSplit: false,
   splitPosition: 0,  // 0 = auto
+  splitLocked: false,
   renderMode: 'single',
   devices: [],
   leftDevices: [],

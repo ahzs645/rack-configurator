@@ -49,6 +49,7 @@ interface RackStore {
   // Actions - Split panel
   setIsSplit: (isSplit: boolean) => void;
   setSplitPosition: (position: number) => void;
+  setSplitLocked: (locked: boolean) => void;
   setRenderMode: (mode: RenderMode) => void;
 
   // Actions - Device management
@@ -190,6 +191,11 @@ export const useRackStore = create<RackStore>((set, get) => ({
   setSplitPosition: (splitPosition) =>
     set((state) => ({
       config: { ...state.config, splitPosition },
+    })),
+
+  setSplitLocked: (splitLocked) =>
+    set((state) => ({
+      config: { ...state.config, splitLocked },
     })),
 
   setRenderMode: (renderMode) =>

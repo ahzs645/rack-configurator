@@ -25,6 +25,7 @@ export function RackToolbar() {
     setBackStyle,
     setIsSplit,
     setSplitPosition,
+    setSplitLocked,
     setRenderMode,
     toggleSnapToGrid,
     setGridSize,
@@ -202,9 +203,32 @@ export function RackToolbar() {
               value={config.splitPosition}
               onChange={(e) => setSplitPosition(Number(e.target.value))}
               placeholder="auto"
-              className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+              disabled={config.splitLocked}
+              className={`w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500 ${
+                config.splitLocked ? 'opacity-50' : ''
+              }`}
             />
             <span className="text-xs text-gray-500">mm</span>
+            {/* Lock button */}
+            <button
+              onClick={() => setSplitLocked(!config.splitLocked)}
+              className={`p-1 rounded transition-colors ${
+                config.splitLocked
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+              title={config.splitLocked ? 'Unlock split position' : 'Lock split position'}
+            >
+              {config.splitLocked ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+              )}
+            </button>
           </div>
 
           {/* Render Mode */}
