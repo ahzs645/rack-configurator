@@ -5,16 +5,19 @@ import { useRackStore } from '../state/rack-store';
 import { generateScadCode } from '../utils/scad-generator';
 import { useLiveScadRender } from '../hooks/useLiveScadRender';
 
+type ViewMode = '2d' | '3d' | 'code';
+
 export function Viewer3D() {
   const { config } = useRackStore();
-  const [showCode, setShowCode] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('3d');
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     scene: THREE.Scene;
-    camera: THREE.PerspectiveCamera;
+    camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
     renderer: THREE.WebGLRenderer;
     animationId: number;
     controls: { isDragging: boolean; prevMouse: { x: number; y: number } };
+    is2D: boolean;
   } | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
 
@@ -45,20 +48,38 @@ export function Viewer3D() {
 
   // Initialize Three.js scene
   useEffect(() => {
-    if (!containerRef.current || showCode) return;
+    if (!containerRef.current || viewMode === 'code') return;
 
     const container = containerRef.current;
     const width = container.clientWidth;
     const height = container.clientHeight;
+    const is2D = viewMode === '2d';
 
     // Scene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1f2937);
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000);
-    camera.position.set(300, 200, 400);
-    camera.lookAt(0, 0, 0);
+    // Camera - orthographic for 2D, perspective for 3D
+    let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
+    if (is2D) {
+      const frustumSize = 300;
+      const aspect = width / height;
+      camera = new THREE.OrthographicCamera(
+        -frustumSize * aspect / 2,
+        frustumSize * aspect / 2,
+        frustumSize / 2,
+        -frustumSize / 2,
+        0.1,
+        2000
+      );
+      // Position camera to look at front (Z axis pointing at viewer)
+      camera.position.set(0, 0, 500);
+      camera.lookAt(0, 0, 0);
+    } else {
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000);
+      camera.position.set(300, 200, 400);
+      camera.lookAt(0, 0, 0);
+    }
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -78,10 +99,12 @@ export function Viewer3D() {
     directionalLight2.position.set(-200, -100, -200);
     scene.add(directionalLight2);
 
-    // Grid helper
-    const gridHelper = new THREE.GridHelper(500, 50, 0x444444, 0x333333);
-    gridHelper.position.y = -100;
-    scene.add(gridHelper);
+    // Grid helper - only for 3D view
+    if (!is2D) {
+      const gridHelper = new THREE.GridHelper(500, 50, 0x444444, 0x333333);
+      gridHelper.position.y = -100;
+      scene.add(gridHelper);
+    }
 
     // Mouse controls state
     const controls = {
@@ -89,7 +112,7 @@ export function Viewer3D() {
       prevMouse: { x: 0, y: 0 },
     };
 
-    sceneRef.current = { scene, camera, renderer, animationId: 0, controls };
+    sceneRef.current = { scene, camera, renderer, animationId: 0, controls, is2D };
 
     // Animation loop
     const animate = () => {
@@ -99,18 +122,29 @@ export function Viewer3D() {
     };
     animate();
 
-    // Mouse controls for rotation
+    // Mouse controls - rotation for 3D, pan for 2D
     const onMouseDown = (e: MouseEvent) => {
       controls.isDragging = true;
       controls.prevMouse = { x: e.clientX, y: e.clientY };
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      if (!controls.isDragging || !meshRef.current) return;
+      if (!controls.isDragging) return;
       const deltaX = e.clientX - controls.prevMouse.x;
       const deltaY = e.clientY - controls.prevMouse.y;
-      meshRef.current.rotation.y += deltaX * 0.01;
-      meshRef.current.rotation.x += deltaY * 0.01;
+
+      if (is2D) {
+        // Pan in 2D mode
+        if (camera instanceof THREE.OrthographicCamera) {
+          const scale = (camera.right - camera.left) / width;
+          camera.position.x -= deltaX * scale;
+          camera.position.y += deltaY * scale;
+        }
+      } else if (meshRef.current) {
+        // Rotate in 3D mode
+        meshRef.current.rotation.y += deltaX * 0.01;
+        meshRef.current.rotation.x += deltaY * 0.01;
+      }
       controls.prevMouse = { x: e.clientX, y: e.clientY };
     };
 
@@ -120,7 +154,17 @@ export function Viewer3D() {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      camera.position.multiplyScalar(e.deltaY > 0 ? 1.1 : 0.9);
+      if (is2D && camera instanceof THREE.OrthographicCamera) {
+        // Zoom orthographic camera
+        const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+        camera.left *= zoomFactor;
+        camera.right *= zoomFactor;
+        camera.top *= zoomFactor;
+        camera.bottom *= zoomFactor;
+        camera.updateProjectionMatrix();
+      } else {
+        camera.position.multiplyScalar(e.deltaY > 0 ? 1.1 : 0.9);
+      }
     };
 
     renderer.domElement.addEventListener('mousedown', onMouseDown);
@@ -134,8 +178,18 @@ export function Viewer3D() {
       if (!containerRef.current || !sceneRef.current) return;
       const w = containerRef.current.clientWidth;
       const h = containerRef.current.clientHeight;
-      sceneRef.current.camera.aspect = w / h;
-      sceneRef.current.camera.updateProjectionMatrix();
+      const cam = sceneRef.current.camera;
+      if (cam instanceof THREE.PerspectiveCamera) {
+        cam.aspect = w / h;
+      } else if (cam instanceof THREE.OrthographicCamera) {
+        const frustumSize = 300;
+        const aspect = w / h;
+        cam.left = -frustumSize * aspect / 2;
+        cam.right = frustumSize * aspect / 2;
+        cam.top = frustumSize / 2;
+        cam.bottom = -frustumSize / 2;
+      }
+      cam.updateProjectionMatrix();
       sceneRef.current.renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
@@ -154,13 +208,13 @@ export function Viewer3D() {
         sceneRef.current = null;
       }
     };
-  }, [showCode]);
+  }, [viewMode]);
 
   // Update mesh when STL geometry changes
   useEffect(() => {
-    if (!sceneRef.current || showCode) return;
+    if (!sceneRef.current || viewMode === 'code') return;
 
-    const { scene } = sceneRef.current;
+    const { scene, is2D } = sceneRef.current;
 
     // Remove old mesh
     if (meshRef.current) {
@@ -183,31 +237,57 @@ export function Viewer3D() {
       const mesh = new THREE.Mesh(stlGeometry, material);
       // Rotate to correct orientation (OpenSCAD Y-up to Three.js Y-up)
       mesh.rotation.x = -Math.PI / 2;
+      // For 2D view, also rotate to show front face
+      if (is2D) {
+        mesh.rotation.y = 0;
+        mesh.rotation.z = 0;
+      }
       scene.add(mesh);
       meshRef.current = mesh;
     }
-  }, [stlGeometry, showCode]);
+  }, [stlGeometry, viewMode]);
 
   return (
     <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col flex-1">
-      {/* Header */}
-      <div className="p-3 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
-        <h3 className="text-lg font-semibold text-white">3D Preview</h3>
-        <button
-          onClick={() => setShowCode(!showCode)}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
-            showCode
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          }`}
-        >
-          {showCode ? 'Show 3D' : 'Show Code'}
-        </button>
+      {/* Header with tabs */}
+      <div className="p-3 border-b border-gray-700 flex-shrink-0">
+        <div className="flex items-center gap-1 bg-gray-900 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('2d')}
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              viewMode === '2d'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+            }`}
+          >
+            2D Front
+          </button>
+          <button
+            onClick={() => setViewMode('3d')}
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              viewMode === '3d'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+            }`}
+          >
+            3D View
+          </button>
+          <button
+            onClick={() => setViewMode('code')}
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              viewMode === 'code'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+            }`}
+          >
+            Code
+          </button>
+        </div>
       </div>
 
       {/* Preview area */}
       <div className="flex-1 overflow-hidden relative">
-        {showCode ? (
+        {viewMode === 'code' ? (
           // Code view
           <div className="h-full overflow-auto p-3">
             <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
@@ -215,7 +295,7 @@ export function Viewer3D() {
             </pre>
           </div>
         ) : (
-          // 3D preview
+          // 2D/3D preview
           <>
             <div ref={containerRef} className="w-full h-full" />
             {/* Loading overlay */}

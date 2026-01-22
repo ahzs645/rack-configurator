@@ -71,19 +71,6 @@ async function loadRackScadLibrary() {
       const rootFS = fs.getRootFS();
       if (rootFS && rootFS.mount) {
         rootFS.mount('/libraries', zipfs);
-        console.log('[OpenSCAD Worker] Mounted rack-scad library at /libraries');
-
-        // List contents to verify
-        try {
-          const files = fs.readdirSync('/libraries');
-          console.log('[OpenSCAD Worker] /libraries contents:', files);
-          if (files.includes('components')) {
-            const componentFiles = fs.readdirSync('/libraries/components');
-            console.log('[OpenSCAD Worker] /libraries/components contents:', componentFiles);
-          }
-        } catch (e) {
-          console.log('[OpenSCAD Worker] Could not list directory:', e);
-        }
       } else {
         console.warn('[OpenSCAD Worker] Could not mount ZipFS - no mount method');
       }
@@ -112,16 +99,38 @@ async function initializeOpenSCAD() {
   await createOpenSCADInstance();
 }
 
+// Filter OpenSCAD output - only show warnings and errors, not verbose info
+function isImportantMessage(text) {
+  // Hide known harmless warnings
+  if (/enclosed_box\.scad|Could not initialize localization/i.test(text)) return false;
+  // Always show other warnings and errors
+  if (/WARNING|ERROR|DEPRECATED/i.test(text)) return true;
+  // Hide verbose cache/geometry info
+  if (/cache|Geometries in cache|CGAL|rendering time/i.test(text)) return false;
+  // Hide geometry stats (Vertices, Facets, Genus, Status, etc.)
+  if (/^\s*(Vertices|Facets|Genus|Status|Top level object)/i.test(text)) return false;
+  return true;
+}
+
 // Create a fresh OpenSCAD instance (needed for each render since WASM can't be reused after abort)
 async function createOpenSCADInstance() {
   return new Promise((resolve, reject) => {
     const moduleConfig = {
       noInitialRun: true,
       print: (text) => {
-        console.log('[OpenSCAD]', text);
+        if (isImportantMessage(text)) {
+          console.log('[OpenSCAD]', text);
+        }
       },
       printErr: (text) => {
-        console.error('[OpenSCAD]', text);
+        if (isImportantMessage(text)) {
+          // Use console.warn for warnings, console.error for errors
+          if (/ERROR/i.test(text)) {
+            console.error('[OpenSCAD]', text);
+          } else {
+            console.warn('[OpenSCAD]', text);
+          }
+        }
       },
       locateFile: (path) => {
         if (path.endsWith('.wasm')) {

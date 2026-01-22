@@ -5,12 +5,14 @@ import { DeviceLibrary } from './components/DeviceLibrary';
 import { RackConfigurator } from './components/RackConfigurator';
 import { RackToolbar } from './components/RackToolbar';
 import { PropertyPanel } from './components/PropertyPanel';
-import { Viewer3D } from './components/Viewer3D';
+import { MainViewer3D } from './components/MainViewer3D';
 import { useRackStore } from './state/rack-store';
 import type { RackDevice } from './data/devices';
 import { getDevice } from './data/devices';
 import { getPlacedDeviceDimensions } from './utils/scad-generator';
 import { clampToRackBounds, calculateFitScale } from './utils/coordinates';
+
+type MainViewMode = '2d' | '3d';
 
 // Drag overlay content for library devices
 function DragPreview({ device }: { device: RackDevice }) {
@@ -36,6 +38,9 @@ function App() {
 
   // Track active drag for overlay
   const [activeDragDevice, setActiveDragDevice] = useState<RackDevice | null>(null);
+
+  // Main view mode toggle
+  const [mainViewMode, setMainViewMode] = useState<MainViewMode>('2d');
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback(
@@ -170,17 +175,50 @@ function App() {
 
         {/* Main content */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Device Library */}
-          <DeviceLibrary />
+          {/* Device Library - only show in 2D mode */}
+          {mainViewMode === '2d' && <DeviceLibrary />}
 
-          {/* Rack Configurator */}
-          <RackConfigurator />
+          {/* Main view area with tabs */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* View mode tabs */}
+            <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center gap-4 flex-shrink-0">
+              <div className="flex items-center gap-1 bg-gray-900 rounded-lg p-1">
+                <button
+                  onClick={() => setMainViewMode('2d')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    mainViewMode === '2d'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                  }`}
+                >
+                  2D Editor
+                </button>
+                <button
+                  onClick={() => setMainViewMode('3d')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    mainViewMode === '3d'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                  }`}
+                >
+                  3D Preview
+                </button>
+              </div>
+              <span className="text-xs text-gray-500">
+                {mainViewMode === '2d' ? 'Drag devices to configure rack' : 'Rotate: drag | Zoom: scroll'}
+              </span>
+            </div>
 
-          {/* Right side: 3D Preview + Properties */}
-          <div className="flex flex-col flex-shrink-0">
-            <Viewer3D />
-            <PropertyPanel />
+            {/* View content */}
+            {mainViewMode === '2d' ? (
+              <RackConfigurator />
+            ) : (
+              <MainViewer3D />
+            )}
           </div>
+
+          {/* Right side: Properties panel */}
+          <PropertyPanel />
         </div>
 
         {/* Footer */}

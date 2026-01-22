@@ -20,13 +20,7 @@ export function PropertyPanel() {
     : null;
 
   if (!selectedDevice) {
-    return (
-      <div className="w-80 bg-gray-800 border-t border-gray-700 p-3 flex-shrink-0">
-        <div className="text-gray-400 text-sm text-center py-2">
-          Select a device to edit properties
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const dims = getPlacedDeviceDimensions(selectedDevice);
