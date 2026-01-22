@@ -1,0 +1,205 @@
+import { useEffect, useCallback, useState } from 'react';
+import { DndContext, useSensor, useSensors, PointerSensor, DragOverlay } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import { DeviceLibrary } from './components/DeviceLibrary';
+import { RackConfigurator } from './components/RackConfigurator';
+import { RackToolbar } from './components/RackToolbar';
+import { PropertyPanel } from './components/PropertyPanel';
+import { Viewer3D } from './components/Viewer3D';
+import { useRackStore } from './state/rack-store';
+import type { RackDevice } from './data/devices';
+import { getDevice } from './data/devices';
+import { getPlacedDeviceDimensions } from './utils/scad-generator';
+import { clampToRackBounds, calculateFitScale } from './utils/coordinates';
+
+// Drag overlay content for library devices
+function DragPreview({ device }: { device: RackDevice }) {
+  return (
+    <div className="bg-blue-500 text-white px-3 py-2 rounded shadow-lg opacity-90 pointer-events-none">
+      <div className="font-medium text-sm">{device.name}</div>
+      <div className="text-xs opacity-75">
+        {device.width} x {device.height} mm
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const {
+    config,
+    selectedDeviceId,
+    addDevice,
+    removeDevice,
+    updateDevicePosition,
+    selectDevice,
+  } = useRackStore();
+
+  // Track active drag for overlay
+  const [activeDragDevice, setActiveDragDevice] = useState<RackDevice | null>(null);
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!selectedDeviceId) return;
+
+      const device = config.devices.find((d) => d.id === selectedDeviceId);
+      if (!device) return;
+
+      const nudgeAmount = e.shiftKey ? 10 : 1;
+
+      switch (e.key) {
+        case 'Delete':
+        case 'Backspace':
+          e.preventDefault();
+          removeDevice(selectedDeviceId);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          updateDevicePosition(selectedDeviceId, device.offsetX - nudgeAmount, device.offsetY);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          updateDevicePosition(selectedDeviceId, device.offsetX + nudgeAmount, device.offsetY);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          updateDevicePosition(selectedDeviceId, device.offsetX, device.offsetY + nudgeAmount);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          updateDevicePosition(selectedDeviceId, device.offsetX, device.offsetY - nudgeAmount);
+          break;
+        case 'Escape':
+          selectDevice(null);
+          break;
+      }
+    },
+    [selectedDeviceId, config.devices, removeDevice, updateDevicePosition, selectDevice]
+  );
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Sensors for drag-and-drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  // Handle drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    if (active.data.current?.type === 'library-device') {
+      const deviceId = active.data.current.deviceId as string;
+      const device = getDevice(deviceId);
+      setActiveDragDevice(device || null);
+    }
+  };
+
+  // Handle drag end from library to rack or repositioning
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over, delta } = event;
+    setActiveDragDevice(null);
+
+    // Check if dragging from library and dropped over the rack
+    if (active.data.current?.type === 'library-device' && over?.id === 'rack-drop-zone') {
+      const deviceId = active.data.current.deviceId as string;
+      const device = getDevice(deviceId);
+
+      if (device) {
+        // Add device at center
+        addDevice(deviceId, 0, 0, 'cage');
+      }
+      return;
+    }
+
+    // Handle repositioning a placed device
+    if (active.data.current?.type === 'placed-device') {
+      const placedDevice = active.data.current.device;
+      if (!placedDevice) return;
+
+      const dims = getPlacedDeviceDimensions(placedDevice);
+
+      // Estimate scale based on typical viewport size
+      const baseScale = calculateFitScale(800, 600, config.rackU, 40);
+      const scale = baseScale * 1; // zoom = 1
+
+      // Convert delta from pixels to mm
+      const deltaXMm = delta.x / scale;
+      const deltaYMm = -delta.y / scale; // Flip Y
+
+      // New position
+      const newX = placedDevice.offsetX + deltaXMm;
+      const newY = placedDevice.offsetY + deltaYMm;
+
+      // Clamp to rack bounds
+      const clamped = clampToRackBounds(newX, newY, dims.width, dims.height, config.rackU);
+
+      updateDevicePosition(placedDevice.id, clamped.x, clamped.y);
+    }
+  };
+
+  // Handle drag cancel
+  const handleDragCancel = () => {
+    setActiveDragDevice(null);
+  };
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="h-screen flex flex-col bg-gray-900 overflow-hidden">
+        {/* Header */}
+        <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between flex-shrink-0">
+          <h1 className="text-xl font-bold text-white">Rack Configurator</h1>
+          <div className="text-sm text-gray-400">
+            Visual drag-and-drop rack mount designer
+          </div>
+        </header>
+
+        {/* Toolbar */}
+        <RackToolbar />
+
+        {/* Main content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Device Library */}
+          <DeviceLibrary />
+
+          {/* Rack Configurator */}
+          <RackConfigurator />
+
+          {/* Right side: 3D Preview + Properties */}
+          <div className="flex flex-col flex-shrink-0">
+            <Viewer3D />
+            <PropertyPanel />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="bg-gray-800 border-t border-gray-700 px-4 py-2 text-xs text-gray-500 flex items-center justify-between flex-shrink-0">
+          <div>
+            {config.devices.length} device{config.devices.length !== 1 ? 's' : ''} placed
+          </div>
+          <div>
+            Rack: {config.rackU}U | Ears: {config.earStyle} | Back: {config.backStyle}
+          </div>
+        </footer>
+      </div>
+
+      {/* Drag overlay - renders the floating preview while dragging */}
+      <DragOverlay dropAnimation={null}>
+        {activeDragDevice ? <DragPreview device={activeDragDevice} /> : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+export default App;

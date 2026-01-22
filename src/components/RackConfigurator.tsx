@@ -1,0 +1,408 @@
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { useDroppable } from '@dnd-kit/core';
+import { useRackStore } from '../state/rack-store';
+import type { ViewConfig } from '../utils/coordinates';
+import {
+  getRackBoundsSvg,
+  rackToSvg,
+  svgToRack,
+  getRackDimensions,
+  devicesOverlap,
+} from '../utils/coordinates';
+import { getPlacedDeviceDimensions } from '../utils/scad-generator';
+import { DeviceOnRack } from './DeviceOnRack';
+
+const PADDING = 40;
+
+export function RackConfigurator() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [svgSize, setSvgSize] = useState({ width: 800, height: 600 });
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+
+  const {
+    config,
+    zoom,
+    panX,
+    panY,
+    snapToGrid,
+    gridSize,
+    selectDevice,
+    setZoom,
+    setPan,
+    setSplitPosition,
+  } = useRackStore();
+
+  // Make this component a drop target
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'rack-drop-zone',
+  });
+
+  // Update SVG size on container resize
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setSvgSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // View configuration for coordinate transforms
+  const view: ViewConfig = {
+    svgWidth: svgSize.width,
+    svgHeight: svgSize.height,
+    rackU: config.rackU,
+    zoom,
+    panX,
+    panY,
+    padding: PADDING,
+  };
+
+  // Get rack bounds in SVG coords
+  const rackBounds = getRackBoundsSvg(view);
+  const rack = getRackDimensions(config.rackU);
+
+  // Handle wheel for zoom
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
+        setZoom(zoom * zoomDelta);
+      } else {
+        // Pan
+        setPan(panX - e.deltaX, panY - e.deltaY);
+      }
+    },
+    [zoom, panX, panY, setZoom, setPan]
+  );
+
+  // Deselect on background click
+  const handleBackgroundClick = () => {
+    selectDevice(null);
+  };
+
+  // Get all devices to display (either main devices or split devices)
+  const allDevices = config.isSplit
+    ? [...config.leftDevices, ...config.rightDevices]
+    : config.devices;
+
+  // Check for overlapping devices
+  const getOverlappingDevices = () => {
+    const overlapping = new Set<string>();
+
+    for (let i = 0; i < allDevices.length; i++) {
+      const d1 = allDevices[i];
+      const dims1 = getPlacedDeviceDimensions(d1);
+
+      for (let j = i + 1; j < allDevices.length; j++) {
+        const d2 = allDevices[j];
+        const dims2 = getPlacedDeviceDimensions(d2);
+
+        if (
+          devicesOverlap(
+            d1.offsetX,
+            d1.offsetY,
+            dims1.width,
+            dims1.height,
+            d2.offsetX,
+            d2.offsetY,
+            dims2.width,
+            dims2.height
+          )
+        ) {
+          overlapping.add(d1.id);
+          overlapping.add(d2.id);
+        }
+      }
+    }
+
+    return overlapping;
+  };
+
+  const overlappingDevices = getOverlappingDevices();
+
+  // Calculate split line position
+  const splitLineX = config.splitPosition || 0; // 0 = center
+
+  // Handle split line drag
+  const handleSplitMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDraggingSplit(true);
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDraggingSplit || !svgRef.current) return;
+
+      const rect = svgRef.current.getBoundingClientRect();
+      const svgX = e.clientX - rect.left;
+      const rackCoords = svgToRack(svgX, 0, view);
+
+      // Clamp to rack bounds with some margin
+      const maxX = rack.width / 2 - 20;
+      const clampedX = Math.max(-maxX, Math.min(maxX, rackCoords.x));
+
+      // Snap to grid if enabled
+      const snappedX = snapToGrid
+        ? Math.round(clampedX / gridSize) * gridSize
+        : Math.round(clampedX);
+
+      setSplitPosition(snappedX);
+    },
+    [isDraggingSplit, view, rack.width, snapToGrid, gridSize, setSplitPosition]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsDraggingSplit(false);
+  }, []);
+
+  // Add global mouse up listener for split dragging
+  useEffect(() => {
+    if (isDraggingSplit) {
+      const handleGlobalMouseUp = () => setIsDraggingSplit(false);
+      window.addEventListener('mouseup', handleGlobalMouseUp);
+      return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    }
+  }, [isDraggingSplit]);
+
+  // Grid lines
+  const gridLines = [];
+  if (snapToGrid) {
+    const numVertical = Math.ceil(rack.width / gridSize);
+    const numHorizontal = Math.ceil(rack.height / gridSize);
+
+    // Vertical lines
+    for (let i = -Math.floor(numVertical / 2); i <= Math.floor(numVertical / 2); i++) {
+      const pos = rackToSvg(i * gridSize, 0, view);
+      gridLines.push(
+        <line
+          key={`v${i}`}
+          x1={pos.x}
+          y1={rackBounds.y}
+          x2={pos.x}
+          y2={rackBounds.y + rackBounds.height}
+          stroke="#374151"
+          strokeWidth={0.5}
+          strokeOpacity={0.5}
+        />
+      );
+    }
+
+    // Horizontal lines
+    for (let i = -Math.floor(numHorizontal / 2); i <= Math.floor(numHorizontal / 2); i++) {
+      const pos = rackToSvg(0, i * gridSize, view);
+      gridLines.push(
+        <line
+          key={`h${i}`}
+          x1={rackBounds.x}
+          y1={pos.y}
+          x2={rackBounds.x + rackBounds.width}
+          y2={pos.y}
+          stroke="#374151"
+          strokeWidth={0.5}
+          strokeOpacity={0.5}
+        />
+      );
+    }
+  }
+
+  // Center crosshair
+  const center = rackToSvg(0, 0, view);
+
+  return (
+    <div
+      ref={(node) => {
+        // Combine refs
+        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        setNodeRef(node);
+      }}
+      className={`flex-1 bg-gray-900 overflow-hidden relative ${isOver ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
+      onWheel={handleWheel}
+    >
+      <svg
+        ref={svgRef}
+        width={svgSize.width}
+        height={svgSize.height}
+        className={`w-full h-full ${isDraggingSplit ? 'cursor-ew-resize' : ''}`}
+        onClick={handleBackgroundClick}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      >
+        {/* Background */}
+        <rect width="100%" height="100%" fill="#111827" />
+
+        {/* Grid lines */}
+        {gridLines}
+
+        {/* Rack panel outline */}
+        <rect
+          x={rackBounds.x}
+          y={rackBounds.y}
+          width={rackBounds.width}
+          height={rackBounds.height}
+          fill="#1f2937"
+          stroke={isOver ? '#3b82f6' : '#4b5563'}
+          strokeWidth={isOver ? 3 : 2}
+          rx={4}
+        />
+
+        {/* Center crosshair */}
+        <line
+          x1={center.x - 10}
+          y1={center.y}
+          x2={center.x + 10}
+          y2={center.y}
+          stroke="#6b7280"
+          strokeWidth={1}
+        />
+        <line
+          x1={center.x}
+          y1={center.y - 10}
+          x2={center.x}
+          y2={center.y + 10}
+          stroke="#6b7280"
+          strokeWidth={1}
+        />
+
+        {/* Split line (when in split mode) */}
+        {config.isSplit && (
+          <g>
+            {/* Invisible wider hit area for dragging */}
+            <line
+              x1={rackToSvg(splitLineX, 0, view).x}
+              y1={rackBounds.y - 20}
+              x2={rackToSvg(splitLineX, 0, view).x}
+              y2={rackBounds.y + rackBounds.height + 20}
+              stroke="transparent"
+              strokeWidth={20}
+              className="cursor-ew-resize"
+              onMouseDown={handleSplitMouseDown}
+            />
+            {/* Visible split line */}
+            <line
+              x1={rackToSvg(splitLineX, 0, view).x}
+              y1={rackBounds.y}
+              x2={rackToSvg(splitLineX, 0, view).x}
+              y2={rackBounds.y + rackBounds.height}
+              stroke={isDraggingSplit ? '#a78bfa' : '#8b5cf6'}
+              strokeWidth={isDraggingSplit ? 3 : 2}
+              strokeDasharray="8,4"
+              pointerEvents="none"
+            />
+            {/* Drag handle indicator */}
+            <rect
+              x={rackToSvg(splitLineX, 0, view).x - 6}
+              y={rackBounds.y + rackBounds.height / 2 - 15}
+              width={12}
+              height={30}
+              rx={3}
+              fill={isDraggingSplit ? '#a78bfa' : '#8b5cf6'}
+              className="cursor-ew-resize"
+              onMouseDown={handleSplitMouseDown}
+            />
+            {/* Grip lines on handle */}
+            <line
+              x1={rackToSvg(splitLineX, 0, view).x - 2}
+              y1={rackBounds.y + rackBounds.height / 2 - 8}
+              x2={rackToSvg(splitLineX, 0, view).x - 2}
+              y2={rackBounds.y + rackBounds.height / 2 + 8}
+              stroke="white"
+              strokeWidth={1}
+              pointerEvents="none"
+            />
+            <line
+              x1={rackToSvg(splitLineX, 0, view).x + 2}
+              y1={rackBounds.y + rackBounds.height / 2 - 8}
+              x2={rackToSvg(splitLineX, 0, view).x + 2}
+              y2={rackBounds.y + rackBounds.height / 2 + 8}
+              stroke="white"
+              strokeWidth={1}
+              pointerEvents="none"
+            />
+            {/* Left/Right labels */}
+            <text
+              x={rackToSvg(splitLineX - 40, 0, view).x}
+              y={rackBounds.y - 8}
+              textAnchor="middle"
+              fill="#a78bfa"
+              fontSize={11}
+              fontWeight="bold"
+            >
+              LEFT
+            </text>
+            <text
+              x={rackToSvg(splitLineX + 40, 0, view).x}
+              y={rackBounds.y - 8}
+              textAnchor="middle"
+              fill="#a78bfa"
+              fontSize={11}
+              fontWeight="bold"
+            >
+              RIGHT
+            </text>
+            {/* Split position indicator */}
+            <text
+              x={rackToSvg(splitLineX, 0, view).x}
+              y={rackBounds.y + rackBounds.height + 15}
+              textAnchor="middle"
+              fill="#a78bfa"
+              fontSize={10}
+            >
+              Split: {splitLineX}mm
+            </text>
+          </g>
+        )}
+
+        {/* Devices */}
+        {allDevices.map((device) => (
+          <DeviceOnRack
+            key={device.id}
+            device={device}
+            view={view}
+            isOverlapping={overlappingDevices.has(device.id)}
+          />
+        ))}
+
+        {/* Dimensions label */}
+        <text
+          x={rackBounds.x + rackBounds.width / 2}
+          y={rackBounds.y + rackBounds.height + 20}
+          textAnchor="middle"
+          fill="#9ca3af"
+          fontSize={12}
+        >
+          {rack.width.toFixed(1)}mm x {rack.height.toFixed(1)}mm ({config.rackU}U)
+        </text>
+
+        {/* Drop hint */}
+        {isOver && (
+          <text
+            x={rackBounds.x + rackBounds.width / 2}
+            y={rackBounds.y - 10}
+            textAnchor="middle"
+            fill="#3b82f6"
+            fontSize={14}
+            fontWeight="bold"
+          >
+            Drop to add device
+          </text>
+        )}
+      </svg>
+
+      {/* Zoom indicator */}
+      <div className="absolute bottom-4 right-4 bg-gray-800 text-gray-300 px-3 py-1 rounded text-sm">
+        {Math.round(zoom * 100)}%
+      </div>
+    </div>
+  );
+}

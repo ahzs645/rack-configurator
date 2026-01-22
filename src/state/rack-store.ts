@@ -1,0 +1,394 @@
+import { create } from 'zustand';
+import type {
+  RackConfig,
+  PlacedDevice,
+  MountType,
+  EarStyle,
+  EarPosition,
+  BackStyle,
+  VentType,
+  RenderMode,
+} from './types';
+import { DEFAULT_RACK_CONFIG } from './types';
+
+interface RackStore {
+  // Current configuration
+  config: RackConfig;
+
+  // UI state
+  selectedDeviceId: string | null;
+  zoom: number;
+  panX: number;
+  panY: number;
+  snapToGrid: boolean;
+  gridSize: number; // mm
+
+  // Rendering state
+  isRendering: boolean;
+  lastRenderTime: number | null;
+  modelUrl: string | null;
+
+  // Actions - Rack settings
+  setRackU: (rackU: RackConfig['rackU']) => void;
+  setEarStyle: (style: EarStyle) => void;
+  setEarPosition: (position: EarPosition) => void;
+  setEarThickness: (thickness: number) => void;
+  setBackStyle: (style: BackStyle) => void;
+  setVentType: (type: VentType) => void;
+  setPlateThickness: (thickness: number) => void;
+  setCornerRadius: (radius: number) => void;
+  setClearance: (clearance: number) => void;
+  setHexDiameter: (diameter: number) => void;
+  setHexWall: (wall: number) => void;
+  setCutoutEdge: (edge: number) => void;
+  setCutoutRadius: (radius: number) => void;
+  setHeavyDevice: (level: 0 | 1 | 2) => void;
+  setShowPreview: (show: boolean) => void;
+  setShowLabels: (show: boolean) => void;
+
+  // Actions - Split panel
+  setIsSplit: (isSplit: boolean) => void;
+  setSplitPosition: (position: number) => void;
+  setRenderMode: (mode: RenderMode) => void;
+
+  // Actions - Device management
+  addDevice: (deviceId: string, offsetX?: number, offsetY?: number, mountType?: MountType, side?: 'left' | 'right') => string;
+  addCustomDevice: (name: string, width: number, height: number, depth: number, offsetX?: number, offsetY?: number, mountType?: MountType, side?: 'left' | 'right') => string;
+  removeDevice: (id: string) => void;
+  updateDevicePosition: (id: string, offsetX: number, offsetY: number) => void;
+  updateDeviceMountType: (id: string, mountType: MountType) => void;
+  moveDeviceToSide: (id: string, side: 'left' | 'right' | 'main') => void;
+  selectDevice: (id: string | null) => void;
+  clearDevices: () => void;
+
+  // Actions - View controls
+  setZoom: (zoom: number) => void;
+  setPan: (x: number, y: number) => void;
+  resetView: () => void;
+  toggleSnapToGrid: () => void;
+  setGridSize: (size: number) => void;
+
+  // Actions - Rendering
+  setRendering: (rendering: boolean) => void;
+  setModelUrl: (url: string | null) => void;
+  setLastRenderTime: (time: number) => void;
+
+  // Actions - Configuration
+  loadConfig: (config: RackConfig) => void;
+  resetConfig: () => void;
+}
+
+// Simple UUID generator (fallback if uuid package not installed)
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+export const useRackStore = create<RackStore>((set, get) => ({
+  // Initial state
+  config: { ...DEFAULT_RACK_CONFIG },
+  selectedDeviceId: null,
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+  snapToGrid: true,
+  gridSize: 10,
+  isRendering: false,
+  lastRenderTime: null,
+  modelUrl: null,
+
+  // Rack settings
+  setRackU: (rackU) =>
+    set((state) => ({
+      config: { ...state.config, rackU },
+    })),
+
+  setEarStyle: (earStyle) =>
+    set((state) => ({
+      config: { ...state.config, earStyle },
+    })),
+
+  setEarPosition: (earPosition) =>
+    set((state) => ({
+      config: { ...state.config, earPosition },
+    })),
+
+  setBackStyle: (backStyle) =>
+    set((state) => ({
+      config: { ...state.config, backStyle },
+    })),
+
+  setVentType: (ventType) =>
+    set((state) => ({
+      config: { ...state.config, ventType },
+    })),
+
+  setPlateThickness: (plateThickness) =>
+    set((state) => ({
+      config: { ...state.config, plateThickness },
+    })),
+
+  setCornerRadius: (cornerRadius) =>
+    set((state) => ({
+      config: { ...state.config, cornerRadius },
+    })),
+
+  setClearance: (clearance) =>
+    set((state) => ({
+      config: { ...state.config, clearance },
+    })),
+
+  setHexDiameter: (hexDiameter) =>
+    set((state) => ({
+      config: { ...state.config, hexDiameter },
+    })),
+
+  setHexWall: (hexWall) =>
+    set((state) => ({
+      config: { ...state.config, hexWall },
+    })),
+
+  setCutoutEdge: (cutoutEdge) =>
+    set((state) => ({
+      config: { ...state.config, cutoutEdge },
+    })),
+
+  setCutoutRadius: (cutoutRadius) =>
+    set((state) => ({
+      config: { ...state.config, cutoutRadius },
+    })),
+
+  setHeavyDevice: (heavyDevice) =>
+    set((state) => ({
+      config: { ...state.config, heavyDevice },
+    })),
+
+  setShowPreview: (showPreview) =>
+    set((state) => ({
+      config: { ...state.config, showPreview },
+    })),
+
+  setShowLabels: (showLabels) =>
+    set((state) => ({
+      config: { ...state.config, showLabels },
+    })),
+
+  setEarThickness: (earThickness) =>
+    set((state) => ({
+      config: { ...state.config, earThickness },
+    })),
+
+  // Split panel settings
+  setIsSplit: (isSplit) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        isSplit,
+        renderMode: isSplit ? 'both' : 'single',
+      },
+    })),
+
+  setSplitPosition: (splitPosition) =>
+    set((state) => ({
+      config: { ...state.config, splitPosition },
+    })),
+
+  setRenderMode: (renderMode) =>
+    set((state) => ({
+      config: { ...state.config, renderMode },
+    })),
+
+  // Device management
+  addDevice: (deviceId, offsetX = 0, offsetY = 0, mountType = 'cage', side) => {
+    const id = generateId();
+    const newDevice: PlacedDevice = {
+      id,
+      deviceId,
+      offsetX,
+      offsetY,
+      mountType,
+    };
+    set((state) => {
+      if (state.config.isSplit && side) {
+        // Add to specific side in split mode
+        const listKey = side === 'left' ? 'leftDevices' : 'rightDevices';
+        return {
+          config: {
+            ...state.config,
+            [listKey]: [...state.config[listKey], newDevice],
+          },
+          selectedDeviceId: id,
+        };
+      }
+      // Add to main devices list
+      return {
+        config: {
+          ...state.config,
+          devices: [...state.config.devices, newDevice],
+        },
+        selectedDeviceId: id,
+      };
+    });
+    return id;
+  },
+
+  addCustomDevice: (name, width, height, depth, offsetX = 0, offsetY = 0, mountType = 'cage', side) => {
+    const id = generateId();
+    const newDevice: PlacedDevice = {
+      id,
+      deviceId: 'custom',
+      offsetX,
+      offsetY,
+      mountType,
+      customName: name,
+      customWidth: width,
+      customHeight: height,
+      customDepth: depth,
+    };
+    set((state) => {
+      if (state.config.isSplit && side) {
+        const listKey = side === 'left' ? 'leftDevices' : 'rightDevices';
+        return {
+          config: {
+            ...state.config,
+            [listKey]: [...state.config[listKey], newDevice],
+          },
+          selectedDeviceId: id,
+        };
+      }
+      return {
+        config: {
+          ...state.config,
+          devices: [...state.config.devices, newDevice],
+        },
+        selectedDeviceId: id,
+      };
+    });
+    return id;
+  },
+
+  removeDevice: (id) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.filter((d) => d.id !== id),
+        leftDevices: state.config.leftDevices.filter((d) => d.id !== id),
+        rightDevices: state.config.rightDevices.filter((d) => d.id !== id),
+      },
+      selectedDeviceId: state.selectedDeviceId === id ? null : state.selectedDeviceId,
+    })),
+
+  updateDevicePosition: (id, offsetX, offsetY) => {
+    const { snapToGrid, gridSize } = get();
+    const snappedX = snapToGrid ? Math.round(offsetX / gridSize) * gridSize : offsetX;
+    const snappedY = snapToGrid ? Math.round(offsetY / gridSize) * gridSize : offsetY;
+
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
+        ),
+      },
+    }));
+  },
+
+  updateDeviceMountType: (id, mountType) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, mountType } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, mountType } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, mountType } : d
+        ),
+      },
+    })),
+
+  moveDeviceToSide: (id, side) =>
+    set((state) => {
+      // Find the device in any list
+      const device =
+        state.config.devices.find((d) => d.id === id) ||
+        state.config.leftDevices.find((d) => d.id === id) ||
+        state.config.rightDevices.find((d) => d.id === id);
+
+      if (!device) return state;
+
+      // Remove from all lists
+      const newDevices = state.config.devices.filter((d) => d.id !== id);
+      const newLeftDevices = state.config.leftDevices.filter((d) => d.id !== id);
+      const newRightDevices = state.config.rightDevices.filter((d) => d.id !== id);
+
+      // Add to target list
+      if (side === 'left') {
+        newLeftDevices.push(device);
+      } else if (side === 'right') {
+        newRightDevices.push(device);
+      } else {
+        newDevices.push(device);
+      }
+
+      return {
+        config: {
+          ...state.config,
+          devices: newDevices,
+          leftDevices: newLeftDevices,
+          rightDevices: newRightDevices,
+        },
+      };
+    }),
+
+  selectDevice: (id) => set({ selectedDeviceId: id }),
+
+  clearDevices: () =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: [],
+        leftDevices: [],
+        rightDevices: [],
+      },
+      selectedDeviceId: null,
+    })),
+
+  // View controls
+  setZoom: (zoom) => set({ zoom: Math.max(0.25, Math.min(4, zoom)) }),
+
+  setPan: (panX, panY) => set({ panX, panY }),
+
+  resetView: () => set({ zoom: 1, panX: 0, panY: 0 }),
+
+  toggleSnapToGrid: () => set((state) => ({ snapToGrid: !state.snapToGrid })),
+
+  setGridSize: (gridSize) => set({ gridSize }),
+
+  // Rendering
+  setRendering: (isRendering) => set({ isRendering }),
+
+  setModelUrl: (modelUrl) => set({ modelUrl }),
+
+  setLastRenderTime: (lastRenderTime) => set({ lastRenderTime }),
+
+  // Configuration
+  loadConfig: (config) =>
+    set({
+      config,
+      selectedDeviceId: null,
+    }),
+
+  resetConfig: () =>
+    set({
+      config: { ...DEFAULT_RACK_CONFIG },
+      selectedDeviceId: null,
+    }),
+}));
