@@ -19,6 +19,8 @@ export function RackConfigurator() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgSize, setSvgSize] = useState({ width: 800, height: 600 });
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0, panX: 0, panY: 0 });
 
   const {
     config,
@@ -89,11 +91,15 @@ export function RackConfigurator() {
     };
   }, [getPanLimits]);
 
-  // Handle wheel for zoom
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+  // Handle wheel for zoom - use native event listener to prevent page zoom
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault(); // Always prevent default to stop page zoom
+
       if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
         const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
         setZoom(zoom * zoomDelta);
       } else {
@@ -101,13 +107,25 @@ export function RackConfigurator() {
         const newPan = clampPan(panX - e.deltaX, panY - e.deltaY);
         setPan(newPan.x, newPan.y);
       }
-    },
-    [zoom, panX, panY, setZoom, setPan, clampPan]
-  );
+    };
 
-  // Deselect on background click
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [zoom, panX, panY, setZoom, setPan, clampPan]);
+
+  // Handle background mouse down for panning
+  const handleBackgroundMouseDown = (e: React.MouseEvent) => {
+    // Only start panning on left click and not on a device
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    setPanStart({ x: e.clientX, y: e.clientY, panX, panY });
+  };
+
+  // Deselect on background click (only if we didn't pan)
   const handleBackgroundClick = () => {
-    selectDevice(null);
+    if (!isPanning) {
+      selectDevice(null);
+    }
   };
 
   // Get all devices to display (either main devices or split devices)
@@ -162,38 +180,52 @@ export function RackConfigurator() {
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (!isDraggingSplit || !svgRef.current) return;
+      // Handle split line dragging
+      if (isDraggingSplit && svgRef.current) {
+        const rect = svgRef.current.getBoundingClientRect();
+        const svgX = e.clientX - rect.left;
+        const rackCoords = svgToRack(svgX, 0, view);
 
-      const rect = svgRef.current.getBoundingClientRect();
-      const svgX = e.clientX - rect.left;
-      const rackCoords = svgToRack(svgX, 0, view);
+        // Clamp to rack bounds with some margin
+        const maxX = rack.width / 2 - 20;
+        const clampedX = Math.max(-maxX, Math.min(maxX, rackCoords.x));
 
-      // Clamp to rack bounds with some margin
-      const maxX = rack.width / 2 - 20;
-      const clampedX = Math.max(-maxX, Math.min(maxX, rackCoords.x));
+        // Snap to grid if enabled
+        const snappedX = snapToGrid
+          ? Math.round(clampedX / gridSize) * gridSize
+          : Math.round(clampedX);
 
-      // Snap to grid if enabled
-      const snappedX = snapToGrid
-        ? Math.round(clampedX / gridSize) * gridSize
-        : Math.round(clampedX);
+        setSplitPosition(snappedX);
+        return;
+      }
 
-      setSplitPosition(snappedX);
+      // Handle view panning
+      if (isPanning) {
+        const deltaX = e.clientX - panStart.x;
+        const deltaY = e.clientY - panStart.y;
+        const newPan = clampPan(panStart.panX + deltaX, panStart.panY + deltaY);
+        setPan(newPan.x, newPan.y);
+      }
     },
-    [isDraggingSplit, view, rack.width, snapToGrid, gridSize, setSplitPosition]
+    [isDraggingSplit, isPanning, panStart, view, rack.width, snapToGrid, gridSize, setSplitPosition, setPan, clampPan]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsDraggingSplit(false);
+    setIsPanning(false);
   }, []);
 
-  // Add global mouse up listener for split dragging
+  // Add global mouse up listener for split dragging and panning
   useEffect(() => {
-    if (isDraggingSplit) {
-      const handleGlobalMouseUp = () => setIsDraggingSplit(false);
+    if (isDraggingSplit || isPanning) {
+      const handleGlobalMouseUp = () => {
+        setIsDraggingSplit(false);
+        setIsPanning(false);
+      };
       window.addEventListener('mouseup', handleGlobalMouseUp);
       return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
     }
-  }, [isDraggingSplit]);
+  }, [isDraggingSplit, isPanning]);
 
   // Grid lines
   const gridLines = [];
@@ -252,19 +284,23 @@ export function RackConfigurator() {
       }}
       data-droppable-id="rack-drop-zone"
       className={`flex-1 bg-gray-900 overflow-hidden relative ${isOver ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
-      onWheel={handleWheel}
     >
       <svg
         ref={svgRef}
         width={svgSize.width}
         height={svgSize.height}
-        className={`w-full h-full ${isDraggingSplit ? 'cursor-ew-resize' : ''}`}
+        className={`w-full h-full ${isDraggingSplit ? 'cursor-ew-resize' : isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
         onClick={handleBackgroundClick}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       >
-        {/* Background */}
-        <rect width="100%" height="100%" fill="#111827" />
+        {/* Background - handles panning */}
+        <rect
+          width="100%"
+          height="100%"
+          fill="#111827"
+          onMouseDown={handleBackgroundMouseDown}
+        />
 
         {/* Rack panel outline */}
         <rect
