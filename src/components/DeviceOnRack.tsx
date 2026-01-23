@@ -259,19 +259,19 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
       {/* Side indicator for split mode */}
       {config.isSplit && (isLeftSide || isRightSide) && (
         <g style={{ pointerEvents: 'none' }}>
-          {/* Side stripe on the edge */}
+          {/* Side stripe on the edge - L stripe on right edge, R stripe on left edge */}
           <rect
-            x={isLeftSide ? x : x + widthSvg - 4}
+            x={isLeftSide ? x + widthSvg - 4 : x}
             y={y}
             width={4}
             height={heightSvg}
             fill={isLeftSide ? '#60a5fa' : '#f472b6'}
-            rx={isLeftSide ? 3 : 0}
-            ry={isLeftSide ? 3 : 0}
+            rx={isLeftSide ? 0 : 3}
+            ry={isLeftSide ? 0 : 3}
           />
-          {/* Side badge */}
+          {/* Side badge - L on right edge, R on left edge */}
           <rect
-            x={isLeftSide ? x - 1 : x + widthSvg - 13}
+            x={isLeftSide ? x + widthSvg - 1 : x - 1}
             y={y - 10}
             width={14}
             height={10}
@@ -279,7 +279,7 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
             rx={2}
           />
           <text
-            x={isLeftSide ? x + 6 : x + widthSvg - 6}
+            x={isLeftSide ? x + widthSvg + 6 : x + 6}
             y={y - 4}
             textAnchor="middle"
             dominantBaseline="middle"
