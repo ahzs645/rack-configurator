@@ -205,7 +205,7 @@ export function MainViewer3D() {
     if (stlGeometry) {
       // Create mesh from STL geometry
       const material = new THREE.MeshStandardMaterial({
-        color: 0x4b5563,
+        color: 0x22d3ee,
         metalness: 0.3,
         roughness: 0.7,
         side: THREE.DoubleSide,
