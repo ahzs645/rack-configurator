@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRackStore } from '../state/rack-store';
+import type { RackConfig } from '../state/types';
 import type { EarStyle, EarPosition } from '../state/types';
 import { EAR_STYLE_LABELS } from '../state/types';
 import { downloadScadFile, downloadConfigJson, generateScadCode, downloadStl } from '../utils/scad-generator';
@@ -14,6 +15,7 @@ export function RackToolbar() {
   const [isExporting, setIsExporting] = useState(false);
   const [renderStatus, setRenderStatus] = useState<string | null>(null);
   const [, setWorkerInitialized] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     config,
@@ -31,6 +33,7 @@ export function RackToolbar() {
     setGridSize,
     resetView,
     clearDevices,
+    loadConfig,
   } = useRackStore();
 
   const handleExportScad = () => {
@@ -56,6 +59,28 @@ export function RackToolbar() {
   const handleExportJson = () => {
     downloadConfigJson(config);
     setShowExportMenu(false);
+  };
+
+  const handleLoadConfig = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        loadConfig(json as RackConfig);
+        setRenderStatus('Config loaded!');
+        setTimeout(() => setRenderStatus(null), 2000);
+      } catch {
+        setRenderStatus('Error: Invalid config file');
+        setTimeout(() => setRenderStatus(null), 3000);
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input so the same file can be loaded again
+    event.target.value = '';
   };
 
   const handleExportStl = async () => {
@@ -309,6 +334,25 @@ export function RackToolbar() {
 
       {/* Divider */}
       <div className="w-px h-6 bg-gray-600" />
+
+      {/* Load Config */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleLoadConfig}
+        className="hidden"
+      />
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded transition-colors flex items-center gap-1"
+        title="Load configuration file"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+        </svg>
+        Open
+      </button>
 
       {/* Export */}
       <div className="relative">
