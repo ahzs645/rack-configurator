@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { PlacedDevice, MountType } from '../state/types';
@@ -143,9 +144,8 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
     e.preventDefault();
     e.stopPropagation();
     selectDevice(device.id);
-    // Store the click position for the menu using native event for accurate coords
-    const nativeEvent = e.nativeEvent;
-    setMenuPosition({ x: nativeEvent.pageX, y: nativeEvent.pageY });
+    // Use clientX/clientY for fixed positioning (relative to viewport)
+    setMenuPosition({ x: e.clientX, y: e.clientY });
     setShowMountMenu(true);
   };
 
@@ -291,43 +291,43 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
           </text>
         </g>
       )}
-      {/* Context menu rendered via portal */}
-      {showMountMenu && menuPosition && (
-        <foreignObject x={0} y={0} width={1} height={1} style={{ overflow: 'visible' }}>
-          <div
-            ref={menuRef}
-            className="bg-gray-800 border border-gray-600 rounded shadow-lg py-1 max-h-64 overflow-y-auto"
-            style={{
-              position: 'fixed',
-              left: menuPosition.x,
-              top: menuPosition.y,
-              width: 160,
-              zIndex: 1000,
-            }}
-          >
-            <div className="px-2 py-1 text-xs text-gray-400 border-b border-gray-700">
-              Mount Type
-            </div>
-            {(Object.keys(MOUNT_TYPE_LABELS) as MountType[]).map((mt) => (
-              <button
-                key={mt}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMountTypeChange(mt);
-                }}
-                className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2 ${
-                  device.mountType === mt ? 'bg-gray-700 text-white' : 'text-gray-300'
-                }`}
-              >
-                <span
-                  className="w-3 h-3 rounded"
-                  style={{ backgroundColor: MOUNT_TYPE_COLORS[mt] }}
-                />
-                {MOUNT_TYPE_LABELS[mt]}
-              </button>
-            ))}
+      {/* Context menu rendered via React Portal to document.body */}
+      {showMountMenu && menuPosition && createPortal(
+        <div
+          ref={menuRef}
+          className="bg-gray-800 border border-gray-600 rounded shadow-lg py-1 max-h-64 overflow-y-auto"
+          style={{
+            position: 'fixed',
+            left: menuPosition.x,
+            top: menuPosition.y,
+            width: 160,
+            zIndex: 9999,
+          }}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <div className="px-2 py-1 text-xs text-gray-400 border-b border-gray-700">
+            Mount Type
           </div>
-        </foreignObject>
+          {(Object.keys(MOUNT_TYPE_LABELS) as MountType[]).map((mt) => (
+            <button
+              key={mt}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMountTypeChange(mt);
+              }}
+              className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2 ${
+                device.mountType === mt ? 'bg-gray-700 text-white' : 'text-gray-300'
+              }`}
+            >
+              <span
+                className="w-3 h-3 rounded"
+                style={{ backgroundColor: MOUNT_TYPE_COLORS[mt] }}
+              />
+              {MOUNT_TYPE_LABELS[mt]}
+            </button>
+          ))}
+        </div>,
+        document.body
       )}
     </g>
   );

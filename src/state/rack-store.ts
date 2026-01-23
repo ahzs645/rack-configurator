@@ -350,20 +350,59 @@ export const useRackStore = create<RackStore>((set, get) => ({
     const snappedX = snapToGrid ? Math.round(offsetX / gridSize) * gridSize : offsetX;
     const snappedY = snapToGrid ? Math.round(offsetY / gridSize) * gridSize : offsetY;
 
-    set((state) => ({
-      config: {
-        ...state.config,
-        devices: state.config.devices.map((d) =>
-          d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
-        ),
-        leftDevices: state.config.leftDevices.map((d) =>
-          d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
-        ),
-        rightDevices: state.config.rightDevices.map((d) =>
-          d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
-        ),
-      },
-    }));
+    set((state) => {
+      // If in split mode, check if device needs to move to the other side
+      if (state.config.isSplit) {
+        const splitPos = state.config.splitPosition;
+        const isInLeft = state.config.leftDevices.some((d) => d.id === id);
+        const isInRight = state.config.rightDevices.some((d) => d.id === id);
+
+        // Determine which side the device should be on based on new position
+        const shouldBeLeft = snappedX < splitPos;
+        const shouldBeRight = snappedX >= splitPos;
+
+        // If device needs to move to the other side
+        if (isInLeft && shouldBeRight) {
+          const device = state.config.leftDevices.find((d) => d.id === id);
+          if (device) {
+            return {
+              config: {
+                ...state.config,
+                leftDevices: state.config.leftDevices.filter((d) => d.id !== id),
+                rightDevices: [...state.config.rightDevices, { ...device, offsetX: snappedX, offsetY: snappedY }],
+              },
+            };
+          }
+        } else if (isInRight && shouldBeLeft) {
+          const device = state.config.rightDevices.find((d) => d.id === id);
+          if (device) {
+            return {
+              config: {
+                ...state.config,
+                rightDevices: state.config.rightDevices.filter((d) => d.id !== id),
+                leftDevices: [...state.config.leftDevices, { ...device, offsetX: snappedX, offsetY: snappedY }],
+              },
+            };
+          }
+        }
+      }
+
+      // Default: just update position in place
+      return {
+        config: {
+          ...state.config,
+          devices: state.config.devices.map((d) =>
+            d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
+          ),
+          leftDevices: state.config.leftDevices.map((d) =>
+            d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
+          ),
+          rightDevices: state.config.rightDevices.map((d) =>
+            d.id === id ? { ...d, offsetX: snappedX, offsetY: snappedY } : d
+          ),
+        },
+      };
+    });
   },
 
   updateDeviceMountType: (id, mountType) =>
