@@ -30,6 +30,9 @@ function App() {
   const {
     config,
     selectedDeviceId,
+    snapToGrid,
+    gridSize,
+    zoom,
     addDevice,
     removeDevice,
     updateDevicePosition,
@@ -173,13 +176,29 @@ function App() {
 
       const dims = getPlacedDeviceDimensions(placedDevice);
 
-      // Estimate scale based on typical viewport size
-      const baseScale = calculateFitScale(800, 600, config.rackU, 40);
-      const scale = baseScale * 1; // zoom = 1
+      // Get the drop zone to calculate accurate scale
+      const dropZone = document.querySelector('[data-droppable-id="rack-drop-zone"]') as HTMLElement;
+      let scale: number;
+      if (dropZone) {
+        const rect = dropZone.getBoundingClientRect();
+        scale = calculateFitScale(rect.width, rect.height, config.rackU, 40) * zoom;
+      } else {
+        // Fallback
+        scale = calculateFitScale(800, 600, config.rackU, 40) * zoom;
+      }
 
-      // Convert delta from pixels to mm
-      const deltaXMm = delta.x / scale;
-      const deltaYMm = -delta.y / scale; // Flip Y
+      // Snap the pixel delta first (same as visual during drag)
+      let snappedDeltaX = delta.x;
+      let snappedDeltaY = delta.y;
+      if (snapToGrid) {
+        const gridSizePx = gridSize * scale;
+        snappedDeltaX = Math.round(delta.x / gridSizePx) * gridSizePx;
+        snappedDeltaY = Math.round(delta.y / gridSizePx) * gridSizePx;
+      }
+
+      // Convert snapped delta from pixels to mm
+      const deltaXMm = snappedDeltaX / scale;
+      const deltaYMm = -snappedDeltaY / scale; // Flip Y
 
       // New position
       const newX = placedDevice.offsetX + deltaXMm;
