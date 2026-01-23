@@ -234,12 +234,12 @@ export function RackToolbar() {
       {/* Show Grid */}
       <button
         onClick={toggleShowGrid}
-        className={`flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors ${
+        className={`p-1.5 rounded transition-colors ${
           showGrid
             ? 'bg-blue-600 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`}
-        title="Toggle grid visibility"
+        title="Show grid"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -250,36 +250,36 @@ export function RackToolbar() {
           />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 10h16M4 15h16M10 4v16M15 4v16" />
         </svg>
-        Grid
       </button>
 
-      {/* Grid Size */}
-      <select
-        value={gridSize}
-        onChange={(e) => setGridSize(Number(e.target.value))}
-        className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-        title="Grid size"
-      >
-        <option value={1}>1mm</option>
-        <option value={5}>5mm</option>
-        <option value={10}>10mm</option>
-        <option value={20}>20mm</option>
-      </select>
+      {/* Grid Size - only show when grid is visible */}
+      {showGrid && (
+        <select
+          value={gridSize}
+          onChange={(e) => setGridSize(Number(e.target.value))}
+          className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+          title="Grid size"
+        >
+          <option value={1}>1mm</option>
+          <option value={5}>5mm</option>
+          <option value={10}>10mm</option>
+          <option value={20}>20mm</option>
+        </select>
+      )}
 
       {/* Snap to Grid */}
       <button
         onClick={toggleSnapToGrid}
-        className={`flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors ${
+        className={`p-1.5 rounded transition-colors ${
           snapToGrid
             ? 'bg-green-600 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`}
-        title="Toggle snap to grid"
+        title="Snap to grid"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
-        Snap
       </button>
 
       {/* Spacer */}
