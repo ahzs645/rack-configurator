@@ -29,7 +29,8 @@ export async function initializeWorker(): Promise<void> {
   initPromise = new Promise((resolve, reject) => {
     try {
       // Create the worker from the public folder (plain JS, no bundling needed)
-      worker = new Worker('/openscad-worker.js');
+      // Use import.meta.env.BASE_URL to support deployment to subdirectories (e.g., GitHub Pages)
+      worker = new Worker(`${import.meta.env.BASE_URL}openscad-worker.js`);
 
       // Handle messages from the worker
       worker.onmessage = (event: MessageEvent<WorkerResponse>) => {

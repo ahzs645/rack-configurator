@@ -1,8 +1,12 @@
 // OpenSCAD Web Worker
 // This worker runs OpenSCAD WASM in a separate thread
 
+// Derive base path from worker location (supports deployment to subdirectories like GitHub Pages)
+const workerUrl = self.location.href;
+const basePath = workerUrl.substring(0, workerUrl.lastIndexOf('/') + 1);
+
 // Load BrowserFS
-importScripts('/browserfs.min.js');
+importScripts(basePath + 'browserfs.min.js');
 
 let openscadInstance = null;
 let isReady = false;
@@ -38,7 +42,7 @@ async function initializeFilesystem() {
 
 // Load the rack-scad library ZIP and mount it
 async function loadRackScadLibrary() {
-  const response = await fetch('/rack-scad.zip');
+  const response = await fetch(basePath + 'rack-scad.zip');
   if (!response.ok) {
     throw new Error('Failed to load rack-scad.zip');
   }
@@ -82,11 +86,11 @@ async function loadRackScadLibrary() {
 
 // Initialize OpenSCAD WASM - just load the factory
 async function initializeOpenSCAD() {
-  const response = await fetch('/openscad.js');
+  const response = await fetch(basePath + 'openscad.js');
   let text = await response.text();
 
   // Patch import.meta.url which doesn't work in classic workers
-  text = text.replace(/import\.meta\.url/g, '"/"');
+  text = text.replace(/import\.meta\.url/g, `"${basePath}"`);
 
   // Remove ES module export statement
   text = text.replace(/export\s+default\s+\w+;?/g, '');
@@ -134,7 +138,7 @@ async function createOpenSCADInstance() {
       },
       locateFile: (path) => {
         if (path.endsWith('.wasm')) {
-          return '/openscad.wasm';
+          return basePath + 'openscad.wasm';
         }
         return path;
       },
