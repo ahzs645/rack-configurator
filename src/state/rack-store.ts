@@ -95,7 +95,7 @@ export const useRackStore = create<RackStore>((set, get) => ({
   panY: 0,
   showGrid: true,
   snapToGrid: true,
-  gridSize: 10,
+  gridSize: 1,
   isRendering: false,
   lastRenderTime: null,
   modelUrl: null,
@@ -183,13 +183,60 @@ export const useRackStore = create<RackStore>((set, get) => ({
 
   // Split panel settings
   setIsSplit: (isSplit) =>
-    set((state) => ({
-      config: {
-        ...state.config,
-        isSplit,
-        renderMode: isSplit ? 'both' : 'single',
-      },
-    })),
+    set((state) => {
+      if (isSplit && !state.config.isSplit) {
+        // Enabling split mode: move devices to left/right based on position
+        const splitPos = state.config.splitPosition;
+        const leftDevices = [...state.config.leftDevices];
+        const rightDevices = [...state.config.rightDevices];
+
+        // Migrate devices from main list to left/right based on their X position
+        for (const device of state.config.devices) {
+          if (device.offsetX < splitPos) {
+            leftDevices.push(device);
+          } else {
+            rightDevices.push(device);
+          }
+        }
+
+        return {
+          config: {
+            ...state.config,
+            isSplit: true,
+            renderMode: 'both',
+            devices: [], // Clear main list
+            leftDevices,
+            rightDevices,
+          },
+        };
+      } else if (!isSplit && state.config.isSplit) {
+        // Disabling split mode: merge left/right back to main devices
+        const devices = [
+          ...state.config.devices,
+          ...state.config.leftDevices,
+          ...state.config.rightDevices,
+        ];
+
+        return {
+          config: {
+            ...state.config,
+            isSplit: false,
+            renderMode: 'single',
+            devices,
+            leftDevices: [],
+            rightDevices: [],
+          },
+        };
+      }
+
+      return {
+        config: {
+          ...state.config,
+          isSplit,
+          renderMode: isSplit ? 'both' : 'single',
+        },
+      };
+    }),
 
   setSplitPosition: (splitPosition) =>
     set((state) => ({

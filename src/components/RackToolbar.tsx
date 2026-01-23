@@ -63,6 +63,7 @@ export function RackToolbar() {
   const handleExportStl = async () => {
     if (isRendering) return;
 
+    setShowExportMenu(false);
     setIsRendering(true);
     setRenderStatus('Initializing...');
 
@@ -343,88 +344,70 @@ export function RackToolbar() {
       <div className="w-px h-6 bg-gray-600" />
 
       {/* Export */}
-      <div className="relative flex items-center gap-2">
-        {/* Export SCAD Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setShowExportMenu(!showExportMenu)}
-            disabled={isExporting}
-            className={`px-3 py-1 text-white text-sm rounded transition-colors flex items-center gap-1 ${
-              isExporting
-                ? 'bg-gray-600 cursor-wait'
-                : 'bg-green-600 hover:bg-green-500'
-            }`}
-          >
-            {isExporting ? (
-              <>
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Exporting...
-              </>
-            ) : (
-              <>
-                Export SCAD
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </>
-            )}
-          </button>
-
-          {/* Dropdown Menu */}
-          {showExportMenu && (
-            <div className="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-600 rounded shadow-lg py-1 min-w-[200px] z-50">
-              <button
-                onClick={handleExportScad}
-                className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
-              >
-                <span className="font-medium text-white">SCAD (requires components)</span>
-                <span className="text-xs text-gray-500">Needs components/ folder</span>
-              </button>
-              <button
-                onClick={handleExportBundledScad}
-                className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
-              >
-                <span className="font-medium text-white">SCAD (self-contained)</span>
-                <span className="text-xs text-gray-500">All code inlined - works anywhere</span>
-              </button>
-              <div className="border-t border-gray-700 my-1" />
-              <button
-                onClick={handleExportJson}
-                className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
-              >
-                <span className="font-medium text-white">Save Config (JSON)</span>
-                <span className="text-xs text-gray-500">Re-import later to edit</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* STL Export - separate button */}
+      <div className="relative">
         <button
-          onClick={handleExportStl}
-          disabled={isRendering}
+          onClick={() => setShowExportMenu(!showExportMenu)}
+          disabled={isExporting || isRendering}
           className={`px-3 py-1 text-white text-sm rounded transition-colors flex items-center gap-1 ${
-            isRendering
+            isExporting || isRendering
               ? 'bg-gray-600 cursor-wait'
-              : 'bg-purple-600 hover:bg-purple-500'
+              : 'bg-blue-600 hover:bg-blue-500'
           }`}
-          title="Generate and download STL file (requires WASM)"
         >
-          {isRendering ? (
+          {isExporting || isRendering ? (
             <>
               <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              Rendering...
+              {isRendering ? 'Rendering...' : 'Exporting...'}
             </>
           ) : (
-            'Export STL'
+            <>
+              Export
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </>
           )}
         </button>
+
+        {/* Dropdown Menu */}
+        {showExportMenu && (
+          <div className="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-600 rounded shadow-lg py-1 min-w-[220px] z-50">
+            <button
+              onClick={handleExportStl}
+              disabled={isRendering}
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+            >
+              <span className="font-medium text-white">STL (3D Print Ready)</span>
+              <span className="text-xs text-gray-500">Renders via WebAssembly</span>
+            </button>
+            <div className="border-t border-gray-700 my-1" />
+            <button
+              onClick={handleExportScad}
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+            >
+              <span className="font-medium text-white">SCAD (requires components)</span>
+              <span className="text-xs text-gray-500">Needs components/ folder</span>
+            </button>
+            <button
+              onClick={handleExportBundledScad}
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+            >
+              <span className="font-medium text-white">SCAD (self-contained)</span>
+              <span className="text-xs text-gray-500">All code inlined - works anywhere</span>
+            </button>
+            <div className="border-t border-gray-700 my-1" />
+            <button
+              onClick={handleExportJson}
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+            >
+              <span className="font-medium text-white">Save Config (JSON)</span>
+              <span className="text-xs text-gray-500">Re-import later to edit</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Close export menu when clicking outside */}
