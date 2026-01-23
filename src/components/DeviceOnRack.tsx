@@ -5,7 +5,7 @@ import type { PlacedDevice, MountType } from '../state/types';
 import { MOUNT_TYPE_LABELS } from '../state/types';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 import type { ViewConfig } from '../utils/coordinates';
-import { rackToSvg, rackSizeToSvg } from '../utils/coordinates';
+import { rackToSvg, rackSizeToSvg, calculateFitScale } from '../utils/coordinates';
 import { useRackStore } from '../state/rack-store';
 
 // Short labels for mount types
@@ -45,7 +45,7 @@ interface DeviceOnRackProps {
 }
 
 export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRackProps) {
-  const { config, selectedDeviceId, selectDevice, updateDeviceMountType } = useRackStore();
+  const { config, selectedDeviceId, selectDevice, updateDeviceMountType, snapToGrid, gridSize } = useRackStore();
   const isSelected = selectedDeviceId === device.id;
   const [showMountMenu, setShowMountMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -74,8 +74,29 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
     },
   });
 
+  // Calculate snapped transform for live grid snapping during drag
+  const getSnappedTransform = () => {
+    if (!transform) return undefined;
+
+    if (!snapToGrid) {
+      return CSS.Translate.toString(transform);
+    }
+
+    // Calculate scale to convert pixels to mm
+    const scale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding) * view.zoom;
+
+    // Convert grid size from mm to pixels
+    const gridSizePx = gridSize * scale;
+
+    // Snap the transform to grid
+    const snappedX = Math.round(transform.x / gridSizePx) * gridSizePx;
+    const snappedY = Math.round(transform.y / gridSizePx) * gridSizePx;
+
+    return `translate3d(${snappedX}px, ${snappedY}px, 0)`;
+  };
+
   const style: React.CSSProperties = {
-    transform: transform ? CSS.Translate.toString(transform) : undefined,
+    transform: getSnappedTransform(),
     cursor: isDragging ? 'grabbing' : 'grab',
   };
 
