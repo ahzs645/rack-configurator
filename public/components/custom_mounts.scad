@@ -144,8 +144,7 @@ module angle_bracket_cage_positioned(
     max_depth = 140,
     plate_thick = 4
 ) {
-    actual_depth = min(max_depth, device_d + 20);
-    translate([offset_x - actual_depth/2, offset_y - device_w/2 - wall, plate_thick])
+    translate([offset_x - device_w/2 - wall, offset_y, plate_thick])
     angle_bracket_cage(device_w, device_h, device_d, wall, max_depth);
 }
 
