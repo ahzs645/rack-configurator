@@ -24,6 +24,9 @@ const MOUNT_TYPE_SHORT: Record<MountType, string> = {
   none: 'NONE',
 };
 
+// Cage wall thickness in mm (max value with heavy_device=2)
+const CAGE_WALL_THICKNESS = 6;
+
 // Colors for mount types
 const MOUNT_TYPE_COLORS: Record<MountType, string> = {
   cage: '#3b82f6',      // blue
@@ -204,6 +207,24 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
       onContextMenu={handleRightClick}
       className="device-on-rack"
     >
+      {/* Cage buffer outline (only for mount types with cages) */}
+      {device.mountType !== 'none' && (
+        <rect
+          x={x - rackSizeToSvg(CAGE_WALL_THICKNESS, view)}
+          y={y - rackSizeToSvg(CAGE_WALL_THICKNESS, view)}
+          width={widthSvg + rackSizeToSvg(CAGE_WALL_THICKNESS * 2, view)}
+          height={heightSvg + rackSizeToSvg(CAGE_WALL_THICKNESS * 2, view)}
+          fill="none"
+          stroke={isOverlapping ? '#ef4444' : '#6b7280'}
+          strokeWidth={1}
+          strokeDasharray="4,4"
+          strokeOpacity={0.6}
+          rx={4}
+          ry={4}
+          style={{ pointerEvents: 'none' }}
+        />
+      )}
+      {/* Device cutout rectangle */}
       <rect
         x={x}
         y={y}

@@ -15,9 +15,14 @@ import { DeviceOnRack } from './DeviceOnRack';
 
 const PADDING = 40;
 
-// Split line exclusion zone - devices must not overlap with this margin
-// The joiner wall is 4mm thick, so we use 6mm margin on each side for safety
-const SPLIT_MARGIN = 6; // mm on each side of split line
+// Split line exclusion zone - devices (including cage walls) must not overlap
+// Components:
+// - Joiner wall: 4mm (extends 2mm on each side)
+// - Cage wall thickness: 4-6mm (depending on heavy_device setting)
+// - Buffer: 2mm for tolerance
+// Total: ~10mm on each side of split line
+const SPLIT_MARGIN = 10; // mm on each side of split line
+const CAGE_WALL_THICKNESS = 6; // max cage wall thickness (heavy_device=2)
 
 export function RackConfigurator() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -146,13 +151,28 @@ export function RackConfigurator() {
     if (!config.isSplit) return false;
 
     const dims = getPlacedDeviceDimensions(device);
-    const deviceLeft = device.offsetX - dims.width / 2;
-    const deviceRight = device.offsetX + dims.width / 2;
+    // Include cage wall thickness in bounds (cage walls extend beyond cutout)
+    // For "none" mount type, there's no cage, so no extra margin needed
+    const cageMargin = device.mountType === 'none' ? 0 : CAGE_WALL_THICKNESS;
+    const deviceLeft = device.offsetX - dims.width / 2 - cageMargin;
+    const deviceRight = device.offsetX + dims.width / 2 + cageMargin;
     const splitLeft = splitLineX - SPLIT_MARGIN;
     const splitRight = splitLineX + SPLIT_MARGIN;
 
-    // Check if device bounds overlap with split exclusion zone
+    // Check if device bounds (including cage walls) overlap with split exclusion zone
     return deviceRight > splitLeft && deviceLeft < splitRight;
+  };
+
+  // Get effective dimensions including cage walls
+  const getEffectiveDimensions = (device: typeof allDevices[0]) => {
+    const dims = getPlacedDeviceDimensions(device);
+    // Add cage wall thickness on each side (except for "none" mount type)
+    const cageMargin = device.mountType === 'none' ? 0 : CAGE_WALL_THICKNESS;
+    return {
+      ...dims,
+      width: dims.width + cageMargin * 2,
+      height: dims.height + cageMargin * 2,
+    };
   };
 
   // Check for overlapping devices and devices that cross the split zone
@@ -161,7 +181,7 @@ export function RackConfigurator() {
 
     for (let i = 0; i < allDevices.length; i++) {
       const d1 = allDevices[i];
-      const dims1 = getPlacedDeviceDimensions(d1);
+      const effDims1 = getEffectiveDimensions(d1);
 
       // Check if device overlaps with split exclusion zone
       if (deviceOverlapsSplitZone(d1)) {
@@ -170,18 +190,19 @@ export function RackConfigurator() {
 
       for (let j = i + 1; j < allDevices.length; j++) {
         const d2 = allDevices[j];
-        const dims2 = getPlacedDeviceDimensions(d2);
+        const effDims2 = getEffectiveDimensions(d2);
 
+        // Check overlap using effective dimensions (including cage walls)
         if (
           devicesOverlap(
             d1.offsetX,
             d1.offsetY,
-            dims1.width,
-            dims1.height,
+            effDims1.width,
+            effDims1.height,
             d2.offsetX,
             d2.offsetY,
-            dims2.width,
-            dims2.height
+            effDims2.width,
+            effDims2.height
           )
         ) {
           overlapping.add(d1.id);
