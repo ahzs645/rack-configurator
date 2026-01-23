@@ -187,25 +187,31 @@ function App() {
         scale = calculateFitScale(800, 600, config.rackU, 40) * zoom;
       }
 
-      // Snap the pixel delta first (same as visual during drag)
-      let snappedDeltaX = delta.x;
-      let snappedDeltaY = delta.y;
+      // Convert delta from pixels to mm
+      const deltaXMm = delta.x / scale;
+      const deltaYMm = -delta.y / scale; // Flip Y
+
+      // Calculate new center position
+      let newCenterX = placedDevice.offsetX + deltaXMm;
+      let newCenterY = placedDevice.offsetY + deltaYMm;
+
+      // Snap the device corner to grid (so edges align with grid lines)
       if (snapToGrid) {
-        const gridSizePx = gridSize * scale;
-        snappedDeltaX = Math.round(delta.x / gridSizePx) * gridSizePx;
-        snappedDeltaY = Math.round(delta.y / gridSizePx) * gridSizePx;
+        // Calculate bottom-left corner
+        const cornerX = newCenterX - dims.width / 2;
+        const cornerY = newCenterY - dims.height / 2;
+
+        // Snap corner to grid
+        const snappedCornerX = Math.round(cornerX / gridSize) * gridSize;
+        const snappedCornerY = Math.round(cornerY / gridSize) * gridSize;
+
+        // Calculate new center from snapped corner
+        newCenterX = snappedCornerX + dims.width / 2;
+        newCenterY = snappedCornerY + dims.height / 2;
       }
 
-      // Convert snapped delta from pixels to mm
-      const deltaXMm = snappedDeltaX / scale;
-      const deltaYMm = -snappedDeltaY / scale; // Flip Y
-
-      // New position
-      const newX = placedDevice.offsetX + deltaXMm;
-      const newY = placedDevice.offsetY + deltaYMm;
-
       // Clamp to rack bounds
-      const clamped = clampToRackBounds(newX, newY, dims.width, dims.height, config.rackU);
+      const clamped = clampToRackBounds(newCenterX, newCenterY, dims.width, dims.height, config.rackU);
 
       updateDevicePosition(placedDevice.id, clamped.x, clamped.y);
     }

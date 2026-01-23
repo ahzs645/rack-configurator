@@ -84,12 +84,33 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
     // Calculate scale to convert pixels to mm
     const scale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding) * view.zoom;
 
-    // Convert grid size from mm to pixels
-    const gridSizePx = gridSize * scale;
+    // Convert current device position and delta to get new position in mm
+    const deltaXMm = transform.x / scale;
+    const deltaYMm = -transform.y / scale; // Flip Y for rack coordinates
 
-    // Snap the transform to grid
-    const snappedX = Math.round(transform.x / gridSizePx) * gridSizePx;
-    const snappedY = Math.round(transform.y / gridSizePx) * gridSizePx;
+    // Calculate new center position
+    const newCenterX = device.offsetX + deltaXMm;
+    const newCenterY = device.offsetY + deltaYMm;
+
+    // Calculate the bottom-left corner position
+    const cornerX = newCenterX - dims.width / 2;
+    const cornerY = newCenterY - dims.height / 2;
+
+    // Snap the corner to grid
+    const snappedCornerX = Math.round(cornerX / gridSize) * gridSize;
+    const snappedCornerY = Math.round(cornerY / gridSize) * gridSize;
+
+    // Calculate new center from snapped corner
+    const snappedCenterX = snappedCornerX + dims.width / 2;
+    const snappedCenterY = snappedCornerY + dims.height / 2;
+
+    // Calculate the snapped delta (difference from original position)
+    const snappedDeltaXMm = snappedCenterX - device.offsetX;
+    const snappedDeltaYMm = snappedCenterY - device.offsetY;
+
+    // Convert back to pixels and round for crisp rendering
+    const snappedX = Math.round(snappedDeltaXMm * scale);
+    const snappedY = Math.round(-snappedDeltaYMm * scale); // Flip Y back
 
     return `translate3d(${snappedX}px, ${snappedY}px, 0)`;
   };
@@ -103,7 +124,6 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
   // Determine colors based on mount type and state
   let fillColor = MOUNT_TYPE_COLORS[device.mountType] || '#3b82f6';
   let strokeColor = '#1d4ed8'; // blue-700
-  const strokeWidth = 2;
 
   if (isOverlapping) {
     fillColor = '#ef4444'; // red-500
@@ -192,9 +212,10 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
         fill={fillColor}
         fillOpacity={isDragging ? 0.7 : 0.85}
         stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        rx={3}
-        ry={3}
+        strokeWidth={1}
+        rx={2}
+        ry={2}
+        shapeRendering="crispEdges"
       />
       {showLabel && (
         <text

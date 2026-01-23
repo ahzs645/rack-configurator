@@ -240,14 +240,15 @@ export function RackConfigurator() {
       gridLines.push(
         <line
           key={`v${i}`}
-          x1={pos.x}
+          x1={Math.round(pos.x)}
           y1={rackBounds.y}
-          x2={pos.x}
+          x2={Math.round(pos.x)}
           y2={rackBounds.y + rackBounds.height}
           stroke={isCenter ? '#6b7280' : '#4b5563'}
-          strokeWidth={isCenter ? 1 : 0.5}
-          strokeOpacity={isCenter ? 0.8 : 0.6}
+          strokeWidth={1}
+          strokeOpacity={isCenter ? 0.8 : 0.5}
           strokeDasharray={isCenter ? 'none' : '2,4'}
+          shapeRendering="crispEdges"
         />
       );
     }
@@ -260,13 +261,14 @@ export function RackConfigurator() {
         <line
           key={`h${i}`}
           x1={rackBounds.x}
-          y1={pos.y}
+          y1={Math.round(pos.y)}
           x2={rackBounds.x + rackBounds.width}
-          y2={pos.y}
+          y2={Math.round(pos.y)}
           stroke={isCenter ? '#6b7280' : '#4b5563'}
-          strokeWidth={isCenter ? 1 : 0.5}
-          strokeOpacity={isCenter ? 0.8 : 0.6}
+          strokeWidth={1}
+          strokeOpacity={isCenter ? 0.8 : 0.5}
           strokeDasharray={isCenter ? 'none' : '2,4'}
+          shapeRendering="crispEdges"
         />
       );
     }
