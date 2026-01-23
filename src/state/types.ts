@@ -67,6 +67,7 @@ export interface PlacedDevice {
   offsetX: number;     // mm from center (negative = left)
   offsetY: number;     // mm from center (negative = down)
   mountType: MountType;
+  backStyle?: BackStyle; // Per-device back style (defaults to global if not set)
   // For custom devices only:
   customWidth?: number;
   customHeight?: number;

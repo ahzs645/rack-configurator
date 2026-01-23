@@ -1,5 +1,6 @@
 import { useRackStore } from '../state/rack-store';
-import type { VentType } from '../state/types';
+import type { VentType, RenderMode } from '../state/types';
+import { RENDER_MODE_LABELS } from '../state/types';
 
 interface AdvancedSettingsModalProps {
   onClose: () => void;
@@ -20,6 +21,7 @@ export function AdvancedSettingsModal({ onClose }: AdvancedSettingsModalProps) {
     setHeavyDevice,
     setShowPreview,
     setShowLabels,
+    setRenderMode,
   } = useRackStore();
 
   return (
@@ -188,6 +190,28 @@ export function AdvancedSettingsModal({ onClose }: AdvancedSettingsModalProps) {
               <p className="text-xs text-gray-500 mt-1">Adds extra support structures for heavier devices</p>
             </div>
           </div>
+
+          {/* Render Mode (for split panels) */}
+          {config.isSplit && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-300 mb-3">Export Mode</h3>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Render Mode</label>
+                <select
+                  value={config.renderMode}
+                  onChange={(e) => setRenderMode(e.target.value as RenderMode)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                >
+                  {Object.entries(RENDER_MODE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Choose which parts to export when using split mode</p>
+              </div>
+            </div>
+          )}
 
           {/* Preview Settings */}
           <div>

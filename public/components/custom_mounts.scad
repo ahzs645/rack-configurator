@@ -134,6 +134,7 @@ module angle_bracket_cage(
 }
 
 // Positioned version - places cage at offset from center (corner-based)
+// Rotated 90 degrees so brackets extend along Y-axis (front-to-back)
 module angle_bracket_cage_positioned(
     offset_x,
     offset_y,
@@ -144,7 +145,8 @@ module angle_bracket_cage_positioned(
     max_depth = 140,
     plate_thick = 4
 ) {
-    translate([offset_x - device_w/2, offset_y - device_h/2, plate_thick])
+    translate([offset_x + device_h/2, offset_y - device_w/2, plate_thick])
+    rotate([0, 0, 90])
     angle_bracket_cage(device_w, device_h, device_d, wall, max_depth);
 }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRackStore } from '../state/rack-store';
-import type { EarStyle, BackStyle, EarPosition, RenderMode } from '../state/types';
-import { EAR_STYLE_LABELS, BACK_STYLE_LABELS, RENDER_MODE_LABELS } from '../state/types';
+import type { EarStyle, EarPosition } from '../state/types';
+import { EAR_STYLE_LABELS } from '../state/types';
 import { downloadScadFile, downloadConfigJson, generateScadCode, downloadStl } from '../utils/scad-generator';
 import { downloadBundledScadFile } from '../utils/scad-bundler';
 import { AdvancedSettingsModal } from './AdvancedSettingsModal';
@@ -23,11 +23,9 @@ export function RackToolbar() {
     setRackU,
     setEarStyle,
     setEarPosition,
-    setBackStyle,
     setIsSplit,
     setSplitPosition,
     setSplitLocked,
-    setRenderMode,
     toggleShowGrid,
     toggleSnapToGrid,
     setGridSize,
@@ -161,25 +159,6 @@ export function RackToolbar() {
       {/* Divider */}
       <div className="w-px h-6 bg-gray-600" />
 
-      {/* Back Style */}
-      <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-300">Back:</label>
-        <select
-          value={config.backStyle}
-          onChange={(e) => setBackStyle(e.target.value as BackStyle)}
-          className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-        >
-          {Object.entries(BACK_STYLE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Divider */}
-      <div className="w-px h-6 bg-gray-600" />
-
       {/* Split Panel Toggle */}
       <button
         onClick={() => setIsSplit(!config.isSplit)}
@@ -197,56 +176,40 @@ export function RackToolbar() {
       </button>
 
       {config.isSplit && (
-        <>
-          {/* Split Position */}
-          <div className="flex items-center gap-1">
-            <label className="text-xs text-gray-400">at:</label>
-            <input
-              type="number"
-              value={config.splitPosition}
-              onChange={(e) => setSplitPosition(Number(e.target.value))}
-              placeholder="auto"
-              disabled={config.splitLocked}
-              className={`w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500 ${
-                config.splitLocked ? 'opacity-50' : ''
-              }`}
-            />
-            <span className="text-xs text-gray-500">mm</span>
-            {/* Lock button */}
-            <button
-              onClick={() => setSplitLocked(!config.splitLocked)}
-              className={`p-1 rounded transition-colors ${
-                config.splitLocked
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-              }`}
-              title={config.splitLocked ? 'Unlock split position' : 'Lock split position'}
-            >
-              {config.splitLocked ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                </svg>
-              )}
-            </button>
-          </div>
-
-          {/* Render Mode */}
-          <select
-            value={config.renderMode}
-            onChange={(e) => setRenderMode(e.target.value as RenderMode)}
-            className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+        <div className="flex items-center gap-1">
+          <label className="text-xs text-gray-400">at:</label>
+          <input
+            type="number"
+            value={config.splitPosition}
+            onChange={(e) => setSplitPosition(Number(e.target.value))}
+            placeholder="auto"
+            disabled={config.splitLocked}
+            className={`w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500 ${
+              config.splitLocked ? 'opacity-50' : ''
+            }`}
+          />
+          <span className="text-xs text-gray-500">mm</span>
+          {/* Lock button */}
+          <button
+            onClick={() => setSplitLocked(!config.splitLocked)}
+            className={`p-1 rounded transition-colors ${
+              config.splitLocked
+                ? 'bg-amber-600 text-white'
+                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+            }`}
+            title={config.splitLocked ? 'Unlock split position' : 'Lock split position'}
           >
-            {Object.entries(RENDER_MODE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </>
+            {config.splitLocked ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+              </svg>
+            )}
+          </button>
+        </div>
       )}
 
       {/* Divider */}
@@ -325,19 +288,23 @@ export function RackToolbar() {
       {/* View controls */}
       <button
         onClick={resetView}
-        className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded transition-colors"
+        className="p-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
         title="Reset view"
       >
-        Reset View
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+        </svg>
       </button>
 
       {/* Clear devices */}
       <button
         onClick={clearDevices}
-        className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded transition-colors"
+        className="p-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
         title="Clear all devices"
       >
-        Clear
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
       </button>
 
       {/* Divider */}

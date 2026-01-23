@@ -59,6 +59,7 @@ interface RackStore {
   removeDevice: (id: string) => void;
   updateDevicePosition: (id: string, offsetX: number, offsetY: number) => void;
   updateDeviceMountType: (id: string, mountType: MountType) => void;
+  updateDeviceBackStyle: (id: string, backStyle: BackStyle) => void;
   moveDeviceToSide: (id: string, side: 'left' | 'right' | 'main') => void;
   selectDevice: (id: string | null) => void;
   clearDevices: () => void;
@@ -417,6 +418,22 @@ export const useRackStore = create<RackStore>((set, get) => ({
         ),
         rightDevices: state.config.rightDevices.map((d) =>
           d.id === id ? { ...d, mountType } : d
+        ),
+      },
+    })),
+
+  updateDeviceBackStyle: (id, backStyle) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, backStyle } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, backStyle } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, backStyle } : d
         ),
       },
     })),
