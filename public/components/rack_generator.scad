@@ -215,9 +215,13 @@ module rack_faceplate_split(
     height = rack_height(rack_u);
     total_width = EIA_19_PANEL_WIDTH;
 
-    // Auto-calculate split point or use provided
-    left_width = split_x > 0 ? split_x : total_width / 2;
+    // Convert split_x from center-offset to absolute position
+    // split_x is relative to panel center: 0 = center, positive = right of center
+    left_width = total_width / 2 + split_x;
     right_width = total_width - left_width;
+
+    // Full panel center is at total_width/2 from left edge
+    full_center_x = total_width / 2;
 
     if (render_part == "left" || render_part == "both" || render_part == "left_print") {
         _render_transform = render_part == "left_print" ? [0, 0, 0] : [0, 0, 0];
@@ -229,7 +233,8 @@ module rack_faceplate_split(
                 rack_u, left_width, height, left_devices,
                 plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
-                cutout_edge, cutout_radius, show_preview, show_labels
+                cutout_edge, cutout_radius, show_preview, show_labels,
+                full_center_x  // Pass full panel center
             );
         } else {
             color("SteelBlue")
@@ -237,7 +242,8 @@ module rack_faceplate_split(
                 rack_u, left_width, height, left_devices,
                 plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
-                cutout_edge, cutout_radius, show_preview, show_labels
+                cutout_edge, cutout_radius, show_preview, show_labels,
+                full_center_x  // Pass full panel center
             );
         }
     }
@@ -253,7 +259,8 @@ module rack_faceplate_split(
                 rack_u, right_width, height, right_devices,
                 plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
-                cutout_edge, cutout_radius, show_preview, show_labels
+                cutout_edge, cutout_radius, show_preview, show_labels,
+                full_center_x, left_width  // Pass full center and offset
             );
         } else {
             color("Coral")
@@ -261,20 +268,21 @@ module rack_faceplate_split(
                 rack_u, right_width, height, right_devices,
                 plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
-                cutout_edge, cutout_radius, show_preview, show_labels
+                cutout_edge, cutout_radius, show_preview, show_labels,
+                full_center_x, left_width  // Pass full center and offset
             );
         }
     }
 
-    // Preview for both halves
+    // Preview for both halves - use full panel center for consistent positioning
     if ($preview && (render_part == "both" || render_part == "left" || render_part == "right")) {
         if (show_preview) {
-            _rg_preview_devices(left_devices, left_width/2, height/2, plate_thick);
-            _rg_preview_devices(right_devices, left_width + right_width/2, height/2, plate_thick);
+            _rg_preview_devices(left_devices, full_center_x, height/2, plate_thick);
+            _rg_preview_devices(right_devices, full_center_x, height/2, plate_thick);
         }
         if (show_labels) {
-            _rg_preview_labels(left_devices, left_width/2, height/2);
-            _rg_preview_labels(right_devices, left_width + right_width/2, height/2);
+            _rg_preview_labels(left_devices, full_center_x, height/2);
+            _rg_preview_labels(right_devices, full_center_x, height/2);
         }
     }
 }
@@ -599,9 +607,11 @@ module _rg_split_half_left(
     rack_u, width, height, devices,
     plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
     clearance, hex_dia, hex_wall, heavy, back_style,
-    cutout_edge, cutout_radius, show_preview, show_labels
+    cutout_edge, cutout_radius, show_preview, show_labels,
+    full_center_x = undef  // Full panel center for device positioning
 ) {
-    center_x = width / 2;
+    // Use full panel center if provided, otherwise use half center (backwards compat)
+    center_x = full_center_x != undef ? full_center_x : width / 2;
     center_z = height / 2;
 
     difference() {
@@ -650,9 +660,13 @@ module _rg_split_half_right(
     rack_u, width, height, devices,
     plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
     clearance, hex_dia, hex_wall, heavy, back_style,
-    cutout_edge, cutout_radius, show_preview, show_labels
+    cutout_edge, cutout_radius, show_preview, show_labels,
+    full_center_x = undef,  // Full panel center
+    left_width = 0  // Width of left half (offset from full panel origin)
 ) {
-    center_x = width / 2;
+    // For right half, center_x is relative to the right half's origin
+    // Full panel center from right half's perspective = full_center_x - left_width
+    center_x = full_center_x != undef ? full_center_x - left_width : width / 2;
     center_z = height / 2;
 
     difference() {
