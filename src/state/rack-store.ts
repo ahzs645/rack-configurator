@@ -20,6 +20,7 @@ interface RackStore {
   zoom: number;
   panX: number;
   panY: number;
+  showGrid: boolean;
   snapToGrid: boolean;
   gridSize: number; // mm
 
@@ -66,6 +67,7 @@ interface RackStore {
   setZoom: (zoom: number) => void;
   setPan: (x: number, y: number) => void;
   resetView: () => void;
+  toggleShowGrid: () => void;
   toggleSnapToGrid: () => void;
   setGridSize: (size: number) => void;
 
@@ -91,6 +93,7 @@ export const useRackStore = create<RackStore>((set, get) => ({
   zoom: 1,
   panX: 0,
   panY: 0,
+  showGrid: true,
   snapToGrid: true,
   gridSize: 10,
   isRendering: false,
@@ -206,11 +209,17 @@ export const useRackStore = create<RackStore>((set, get) => ({
   // Device management
   addDevice: (deviceId, offsetX = 0, offsetY = 0, mountType = 'cage', side) => {
     const id = generateId();
+    const { snapToGrid, gridSize } = get();
+
+    // Apply grid snapping to initial position
+    const snappedX = snapToGrid ? Math.round(offsetX / gridSize) * gridSize : offsetX;
+    const snappedY = snapToGrid ? Math.round(offsetY / gridSize) * gridSize : offsetY;
+
     const newDevice: PlacedDevice = {
       id,
       deviceId,
-      offsetX,
-      offsetY,
+      offsetX: snappedX,
+      offsetY: snappedY,
       mountType,
     };
     set((state) => {
@@ -239,11 +248,17 @@ export const useRackStore = create<RackStore>((set, get) => ({
 
   addCustomDevice: (name, width, height, depth, offsetX = 0, offsetY = 0, mountType = 'cage', side) => {
     const id = generateId();
+    const { snapToGrid, gridSize } = get();
+
+    // Apply grid snapping to initial position
+    const snappedX = snapToGrid ? Math.round(offsetX / gridSize) * gridSize : offsetX;
+    const snappedY = snapToGrid ? Math.round(offsetY / gridSize) * gridSize : offsetY;
+
     const newDevice: PlacedDevice = {
       id,
       deviceId: 'custom',
-      offsetX,
-      offsetY,
+      offsetX: snappedX,
+      offsetY: snappedY,
       mountType,
       customName: name,
       customWidth: width,
@@ -373,6 +388,8 @@ export const useRackStore = create<RackStore>((set, get) => ({
   setPan: (panX, panY) => set({ panX, panY }),
 
   resetView: () => set({ zoom: 1, panX: 0, panY: 0 }),
+
+  toggleShowGrid: () => set((state) => ({ showGrid: !state.showGrid })),
 
   toggleSnapToGrid: () => set((state) => ({ snapToGrid: !state.snapToGrid })),
 

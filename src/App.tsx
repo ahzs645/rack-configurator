@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { DndContext, useSensor, useSensors, PointerSensor, DragOverlay } from '@dnd-kit/core';
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent, DragMoveEvent } from '@dnd-kit/core';
 import { DeviceLibrary } from './components/DeviceLibrary';
 import { RackConfigurator } from './components/RackConfigurator';
 import { RackToolbar } from './components/RackToolbar';
@@ -39,6 +39,9 @@ function App() {
   // Track active drag for overlay
   const [activeDragDevice, setActiveDragDevice] = useState<RackDevice | null>(null);
 
+  // Track last pointer position during drag for accurate drop placement
+  const lastPointerPosition = useRef<{ x: number; y: number } | null>(null);
+
   // Main view mode toggle
   const [mainViewMode, setMainViewMode] = useState<MainViewMode>('2d');
 
@@ -47,7 +50,10 @@ function App() {
     (e: KeyboardEvent) => {
       if (!selectedDeviceId) return;
 
-      const device = config.devices.find((d) => d.id === selectedDeviceId);
+      // Search in all device lists (main, left, right)
+      const device = config.devices.find((d) => d.id === selectedDeviceId)
+        || config.leftDevices.find((d) => d.id === selectedDeviceId)
+        || config.rightDevices.find((d) => d.id === selectedDeviceId);
       if (!device) return;
 
       const nudgeAmount = e.shiftKey ? 10 : 1;
@@ -79,7 +85,7 @@ function App() {
           break;
       }
     },
-    [selectedDeviceId, config.devices, removeDevice, updateDevicePosition, selectDevice]
+    [selectedDeviceId, config.devices, config.leftDevices, config.rightDevices, removeDevice, updateDevicePosition, selectDevice]
   );
 
   useEffect(() => {
@@ -104,6 +110,20 @@ function App() {
       const device = getDevice(deviceId);
       setActiveDragDevice(device || null);
     }
+    lastPointerPosition.current = null;
+  };
+
+  // Handle drag move to track pointer position
+  const handleDragMove = (event: DragMoveEvent) => {
+    // Track the pointer position from activatorEvent
+    const pointerEvent = event.activatorEvent as PointerEvent;
+    if (pointerEvent && event.delta) {
+      // Calculate current pointer position from initial position + delta
+      lastPointerPosition.current = {
+        x: pointerEvent.clientX + event.delta.x,
+        y: pointerEvent.clientY + event.delta.y,
+      };
+    }
   };
 
   // Handle drag end from library to rack or repositioning
@@ -117,14 +137,32 @@ function App() {
       const device = getDevice(deviceId);
 
       if (device) {
-        // Determine which side to add to in split mode
+        // Determine which side to add to in split mode based on pointer position
         let side: 'left' | 'right' | undefined;
-        if (config.isSplit) {
-          // Default position (0) - if split is at 0 or positive, go left; if negative, go right
-          side = config.splitPosition >= 0 ? 'left' : 'right';
+        if (config.isSplit && lastPointerPosition.current) {
+          // Get the drop zone element to calculate relative position
+          const dropZone = document.querySelector('[data-droppable-id="rack-drop-zone"]') as HTMLElement;
+          if (dropZone) {
+            const rect = dropZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+
+            // Estimate scale to convert splitPosition (in mm) to pixels
+            const baseScale = calculateFitScale(rect.width, rect.height, config.rackU, 40);
+            const splitOffsetPx = config.splitPosition * baseScale;
+            const splitLineX = centerX + splitOffsetPx;
+
+            // If pointer is left of the split line, go left; otherwise right
+            side = lastPointerPosition.current.x < splitLineX ? 'left' : 'right';
+          } else {
+            // Fallback: use split position sign
+            side = config.splitPosition >= 0 ? 'left' : 'right';
+          }
         }
+
+        // For position, start at center (0, 0) - user can drag to reposition
         addDevice(deviceId, 0, 0, 'cage', side);
       }
+      lastPointerPosition.current = null;
       return;
     }
 
@@ -157,24 +195,18 @@ function App() {
   // Handle drag cancel
   const handleDragCancel = () => {
     setActiveDragDevice(null);
+    lastPointerPosition.current = null;
   };
 
   return (
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
       <div className="h-screen flex flex-col bg-gray-900 overflow-hidden">
-        {/* Header */}
-        <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between flex-shrink-0">
-          <h1 className="text-xl font-bold text-white">Rack Configurator</h1>
-          <div className="text-sm text-gray-400">
-            Visual drag-and-drop rack mount designer
-          </div>
-        </header>
-
         {/* Toolbar */}
         <RackToolbar />
 

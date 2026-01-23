@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { PlacedDevice, MountType } from '../state/types';
@@ -48,6 +48,8 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
   const { config, selectedDeviceId, selectDevice, updateDeviceMountType } = useRackStore();
   const isSelected = selectedDeviceId === device.id;
   const [showMountMenu, setShowMountMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Determine which side the device is on (for split mode)
   const isLeftSide = config.leftDevices.some((d) => d.id === device.id);
@@ -101,22 +103,52 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
     selectDevice(device.id);
   };
 
-  const handleRightClick = (e: React.MouseEvent) => {
+  const handleRightClick = (e: React.MouseEvent<SVGGElement>) => {
     e.preventDefault();
     e.stopPropagation();
     selectDevice(device.id);
+    // Store the click position for the menu using native event for accurate coords
+    const nativeEvent = e.nativeEvent;
+    setMenuPosition({ x: nativeEvent.pageX, y: nativeEvent.pageY });
     setShowMountMenu(true);
   };
 
   const handleMountTypeChange = (mountType: MountType) => {
     updateDeviceMountType(device.id, mountType);
     setShowMountMenu(false);
+    setMenuPosition(null);
   };
 
-  // Close menu on click outside
-  const handleMenuBlur = () => {
-    setTimeout(() => setShowMountMenu(false), 200);
-  };
+  // Close menu on click outside or escape key
+  useEffect(() => {
+    if (!showMountMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMountMenu(false);
+        setMenuPosition(null);
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowMountMenu(false);
+        setMenuPosition(null);
+      }
+    };
+
+    // Delay adding the listener to prevent immediate close
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showMountMenu]);
 
   // Only show label if device is large enough
   const showLabel = widthSvg > 60 && heightSvg > 20;
@@ -263,23 +295,30 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
           />
         </>
       )}
-      {/* Context menu for mount type */}
-      {showMountMenu && (
-        <foreignObject
-          x={x + widthSvg + 5}
-          y={y}
-          width={150}
-          height={300}
-          onBlur={handleMenuBlur}
-        >
-          <div className="bg-gray-800 border border-gray-600 rounded shadow-lg py-1 max-h-64 overflow-y-auto">
+      {/* Context menu rendered via portal */}
+      {showMountMenu && menuPosition && (
+        <foreignObject x={0} y={0} width={1} height={1} style={{ overflow: 'visible' }}>
+          <div
+            ref={menuRef}
+            className="bg-gray-800 border border-gray-600 rounded shadow-lg py-1 max-h-64 overflow-y-auto"
+            style={{
+              position: 'fixed',
+              left: menuPosition.x,
+              top: menuPosition.y,
+              width: 160,
+              zIndex: 1000,
+            }}
+          >
             <div className="px-2 py-1 text-xs text-gray-400 border-b border-gray-700">
               Mount Type
             </div>
             {(Object.keys(MOUNT_TYPE_LABELS) as MountType[]).map((mt) => (
               <button
                 key={mt}
-                onClick={() => handleMountTypeChange(mt)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMountTypeChange(mt);
+                }}
                 className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2 ${
                   device.mountType === mt ? 'bg-gray-700 text-white' : 'text-gray-300'
                 }`}

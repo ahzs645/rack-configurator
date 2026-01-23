@@ -17,6 +17,7 @@ export function RackToolbar() {
 
   const {
     config,
+    showGrid,
     snapToGrid,
     gridSize,
     setRackU,
@@ -27,6 +28,7 @@ export function RackToolbar() {
     setSplitPosition,
     setSplitLocked,
     setRenderMode,
+    toggleShowGrid,
     toggleSnapToGrid,
     setGridSize,
     resetView,
@@ -265,15 +267,15 @@ export function RackToolbar() {
       {/* Divider */}
       <div className="w-px h-6 bg-gray-600" />
 
-      {/* Snap to Grid */}
+      {/* Show Grid */}
       <button
-        onClick={toggleSnapToGrid}
+        onClick={toggleShowGrid}
         className={`flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors ${
-          snapToGrid
+          showGrid
             ? 'bg-blue-600 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
         }`}
-        title="Toggle snap to grid"
+        title="Toggle grid visibility"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -287,17 +289,34 @@ export function RackToolbar() {
         Grid
       </button>
 
-      {snapToGrid && (
-        <select
-          value={gridSize}
-          onChange={(e) => setGridSize(Number(e.target.value))}
-          className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-        >
-          <option value={5}>5mm</option>
-          <option value={10}>10mm</option>
-          <option value={20}>20mm</option>
-        </select>
-      )}
+      {/* Grid Size */}
+      <select
+        value={gridSize}
+        onChange={(e) => setGridSize(Number(e.target.value))}
+        className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+        title="Grid size"
+      >
+        <option value={1}>1mm</option>
+        <option value={5}>5mm</option>
+        <option value={10}>10mm</option>
+        <option value={20}>20mm</option>
+      </select>
+
+      {/* Snap to Grid */}
+      <button
+        onClick={toggleSnapToGrid}
+        className={`flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors ${
+          snapToGrid
+            ? 'bg-green-600 text-white'
+            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+        }`}
+        title="Toggle snap to grid"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+        Snap
+      </button>
 
       {/* Spacer */}
       <div className="flex-1" />

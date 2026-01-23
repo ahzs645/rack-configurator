@@ -25,6 +25,7 @@ export function RackConfigurator() {
     zoom,
     panX,
     panY,
+    showGrid,
     snapToGrid,
     gridSize,
     selectDevice,
@@ -71,6 +72,23 @@ export function RackConfigurator() {
   const rackBounds = getRackBoundsSvg(view);
   const rack = getRackDimensions(config.rackU);
 
+  // Calculate pan limits based on rack size and viewport
+  const getPanLimits = useCallback(() => {
+    // Allow panning up to half the viewport size beyond the rack
+    const maxPanX = svgSize.width * 0.4;
+    const maxPanY = svgSize.height * 0.4;
+    return { maxPanX, maxPanY };
+  }, [svgSize.width, svgSize.height]);
+
+  // Clamp pan values to limits
+  const clampPan = useCallback((x: number, y: number) => {
+    const { maxPanX, maxPanY } = getPanLimits();
+    return {
+      x: Math.max(-maxPanX, Math.min(maxPanX, x)),
+      y: Math.max(-maxPanY, Math.min(maxPanY, y)),
+    };
+  }, [getPanLimits]);
+
   // Handle wheel for zoom
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -79,11 +97,12 @@ export function RackConfigurator() {
         const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
         setZoom(zoom * zoomDelta);
       } else {
-        // Pan
-        setPan(panX - e.deltaX, panY - e.deltaY);
+        // Pan with limits
+        const newPan = clampPan(panX - e.deltaX, panY - e.deltaY);
+        setPan(newPan.x, newPan.y);
       }
     },
-    [zoom, panX, panY, setZoom, setPan]
+    [zoom, panX, panY, setZoom, setPan, clampPan]
   );
 
   // Deselect on background click
@@ -178,13 +197,14 @@ export function RackConfigurator() {
 
   // Grid lines
   const gridLines = [];
-  if (snapToGrid) {
+  if (showGrid) {
     const numVertical = Math.ceil(rack.width / gridSize);
     const numHorizontal = Math.ceil(rack.height / gridSize);
 
-    // Vertical lines
+    // Vertical lines (dotted)
     for (let i = -Math.floor(numVertical / 2); i <= Math.floor(numVertical / 2); i++) {
       const pos = rackToSvg(i * gridSize, 0, view);
+      const isCenter = i === 0;
       gridLines.push(
         <line
           key={`v${i}`}
@@ -192,16 +212,18 @@ export function RackConfigurator() {
           y1={rackBounds.y}
           x2={pos.x}
           y2={rackBounds.y + rackBounds.height}
-          stroke="#374151"
-          strokeWidth={0.5}
-          strokeOpacity={0.5}
+          stroke={isCenter ? '#6b7280' : '#4b5563'}
+          strokeWidth={isCenter ? 1 : 0.5}
+          strokeOpacity={isCenter ? 0.8 : 0.6}
+          strokeDasharray={isCenter ? 'none' : '2,4'}
         />
       );
     }
 
-    // Horizontal lines
+    // Horizontal lines (dotted)
     for (let i = -Math.floor(numHorizontal / 2); i <= Math.floor(numHorizontal / 2); i++) {
       const pos = rackToSvg(0, i * gridSize, view);
+      const isCenter = i === 0;
       gridLines.push(
         <line
           key={`h${i}`}
@@ -209,9 +231,10 @@ export function RackConfigurator() {
           y1={pos.y}
           x2={rackBounds.x + rackBounds.width}
           y2={pos.y}
-          stroke="#374151"
-          strokeWidth={0.5}
-          strokeOpacity={0.5}
+          stroke={isCenter ? '#6b7280' : '#4b5563'}
+          strokeWidth={isCenter ? 1 : 0.5}
+          strokeOpacity={isCenter ? 0.8 : 0.6}
+          strokeDasharray={isCenter ? 'none' : '2,4'}
         />
       );
     }
@@ -227,6 +250,7 @@ export function RackConfigurator() {
         (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
         setNodeRef(node);
       }}
+      data-droppable-id="rack-drop-zone"
       className={`flex-1 bg-gray-900 overflow-hidden relative ${isOver ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
       onWheel={handleWheel}
     >
@@ -242,9 +266,6 @@ export function RackConfigurator() {
         {/* Background */}
         <rect width="100%" height="100%" fill="#111827" />
 
-        {/* Grid lines */}
-        {gridLines}
-
         {/* Rack panel outline */}
         <rect
           x={rackBounds.x}
@@ -256,6 +277,9 @@ export function RackConfigurator() {
           strokeWidth={isOver ? 3 : 2}
           rx={4}
         />
+
+        {/* Grid lines (drawn on top of rack panel) */}
+        {gridLines}
 
         {/* Center crosshair */}
         <line
