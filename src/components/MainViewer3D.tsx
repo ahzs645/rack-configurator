@@ -129,9 +129,9 @@ export function MainViewer3D() {
       const deltaX = e.clientX - controls.prevMouse.x;
       const deltaY = e.clientY - controls.prevMouse.y;
 
-      // Update spherical coordinates
+      // Update spherical coordinates (drag direction matches rotation)
       controls.spherical.theta -= deltaX * 0.01;
-      controls.spherical.phi += deltaY * 0.01;
+      controls.spherical.phi -= deltaY * 0.01;
 
       // Clamp phi to avoid flipping (keep between 0.1 and PI - 0.1)
       controls.spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, controls.spherical.phi));
