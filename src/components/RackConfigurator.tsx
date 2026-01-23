@@ -7,12 +7,17 @@ import {
   rackToSvg,
   svgToRack,
   getRackDimensions,
+  rackSizeToSvg,
   devicesOverlap,
 } from '../utils/coordinates';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 import { DeviceOnRack } from './DeviceOnRack';
 
 const PADDING = 40;
+
+// Split line exclusion zone - devices must not overlap with this margin
+// The joiner wall is 4mm thick, so we use 6mm margin on each side for safety
+const SPLIT_MARGIN = 6; // mm on each side of split line
 
 export function RackConfigurator() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,13 +138,35 @@ export function RackConfigurator() {
     ? [...config.leftDevices, ...config.rightDevices]
     : config.devices;
 
-  // Check for overlapping devices
+  // Calculate split line position (moved here so it's available for overlap detection)
+  const splitLineX = config.splitPosition || 0; // 0 = center
+
+  // Check if a device overlaps with the split exclusion zone
+  const deviceOverlapsSplitZone = (device: typeof allDevices[0]) => {
+    if (!config.isSplit) return false;
+
+    const dims = getPlacedDeviceDimensions(device);
+    const deviceLeft = device.offsetX - dims.width / 2;
+    const deviceRight = device.offsetX + dims.width / 2;
+    const splitLeft = splitLineX - SPLIT_MARGIN;
+    const splitRight = splitLineX + SPLIT_MARGIN;
+
+    // Check if device bounds overlap with split exclusion zone
+    return deviceRight > splitLeft && deviceLeft < splitRight;
+  };
+
+  // Check for overlapping devices and devices that cross the split zone
   const getOverlappingDevices = () => {
     const overlapping = new Set<string>();
 
     for (let i = 0; i < allDevices.length; i++) {
       const d1 = allDevices[i];
       const dims1 = getPlacedDeviceDimensions(d1);
+
+      // Check if device overlaps with split exclusion zone
+      if (deviceOverlapsSplitZone(d1)) {
+        overlapping.add(d1.id);
+      }
 
       for (let j = i + 1; j < allDevices.length; j++) {
         const d2 = allDevices[j];
@@ -167,9 +194,6 @@ export function RackConfigurator() {
   };
 
   const overlappingDevices = getOverlappingDevices();
-
-  // Calculate split line position
-  const splitLineX = config.splitPosition || 0; // 0 = center
 
   // Handle split line drag (only if not locked)
   const handleSplitMouseDown = useCallback((e: React.MouseEvent) => {
@@ -340,6 +364,43 @@ export function RackConfigurator() {
         {/* Split line (when in split mode) */}
         {config.isSplit && (
           <g>
+            {/* Exclusion zone - hatched area where devices cannot be placed */}
+            <defs>
+              <pattern id="splitHatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="8" stroke="#ef4444" strokeWidth="2" strokeOpacity="0.3" />
+              </pattern>
+            </defs>
+            <rect
+              x={rackToSvg(splitLineX - SPLIT_MARGIN, 0, view).x}
+              y={rackBounds.y}
+              width={rackSizeToSvg(SPLIT_MARGIN * 2, view)}
+              height={rackBounds.height}
+              fill="url(#splitHatch)"
+              pointerEvents="none"
+            />
+            {/* Exclusion zone borders */}
+            <line
+              x1={rackToSvg(splitLineX - SPLIT_MARGIN, 0, view).x}
+              y1={rackBounds.y}
+              x2={rackToSvg(splitLineX - SPLIT_MARGIN, 0, view).x}
+              y2={rackBounds.y + rackBounds.height}
+              stroke="#ef4444"
+              strokeWidth={1}
+              strokeOpacity={0.5}
+              strokeDasharray="4,4"
+              pointerEvents="none"
+            />
+            <line
+              x1={rackToSvg(splitLineX + SPLIT_MARGIN, 0, view).x}
+              y1={rackBounds.y}
+              x2={rackToSvg(splitLineX + SPLIT_MARGIN, 0, view).x}
+              y2={rackBounds.y + rackBounds.height}
+              stroke="#ef4444"
+              strokeWidth={1}
+              strokeOpacity={0.5}
+              strokeDasharray="4,4"
+              pointerEvents="none"
+            />
             {/* Invisible wider hit area for dragging (only if not locked) */}
             {!config.splitLocked && (
               <line
@@ -446,7 +507,7 @@ export function RackConfigurator() {
               fill="#a78bfa"
               fontSize={10}
             >
-              Split: {splitLineX}mm
+              Split: {splitLineX}mm (±{SPLIT_MARGIN}mm zone)
             </text>
           </g>
         )}
