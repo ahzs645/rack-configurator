@@ -45,8 +45,7 @@ interface DeviceOnRackProps {
 }
 
 export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRackProps) {
-  const { config, selectedDeviceId, selectDevice, updateDeviceMountType, snapToGrid, gridSize } = useRackStore();
-  const isSelected = selectedDeviceId === device.id;
+  const { config, selectDevice, updateDeviceMountType, snapToGrid, gridSize } = useRackStore();
   const [showMountMenu, setShowMountMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -98,17 +97,13 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
   const style: React.CSSProperties = {
     transform: getSnappedTransform(),
     cursor: isDragging ? 'grabbing' : 'grab',
+    outline: 'none',
   };
 
   // Determine colors based on mount type and state
   let fillColor = MOUNT_TYPE_COLORS[device.mountType] || '#3b82f6';
   let strokeColor = '#1d4ed8'; // blue-700
-  let strokeWidth = 2;
-
-  if (isSelected) {
-    strokeColor = '#f59e0b'; // amber-500
-    strokeWidth = 3;
-  }
+  const strokeWidth = 2;
 
   if (isOverlapping) {
     fillColor = '#ef4444'; // red-500
@@ -274,47 +269,6 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
             {isLeftSide ? 'L' : 'R'}
           </text>
         </g>
-      )}
-      {/* Selection handles */}
-      {isSelected && !isDragging && (
-        <>
-          <rect
-            x={x - 4}
-            y={y - 4}
-            width={8}
-            height={8}
-            fill="#f59e0b"
-            stroke="#78350f"
-            strokeWidth={1}
-          />
-          <rect
-            x={x + widthSvg - 4}
-            y={y - 4}
-            width={8}
-            height={8}
-            fill="#f59e0b"
-            stroke="#78350f"
-            strokeWidth={1}
-          />
-          <rect
-            x={x - 4}
-            y={y + heightSvg - 4}
-            width={8}
-            height={8}
-            fill="#f59e0b"
-            stroke="#78350f"
-            strokeWidth={1}
-          />
-          <rect
-            x={x + widthSvg - 4}
-            y={y + heightSvg - 4}
-            width={8}
-            height={8}
-            fill="#f59e0b"
-            stroke="#78350f"
-            strokeWidth={1}
-          />
-        </>
       )}
       {/* Context menu rendered via portal */}
       {showMountMenu && menuPosition && (
