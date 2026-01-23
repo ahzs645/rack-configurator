@@ -106,9 +106,9 @@ module angle_bracket_cage(
     // Left L-bracket
     difference() {
         union() {
-            // Bottom plate
+            // Bottom plate - extends in Y (depth), lip in X
             cube([wall + 10, actual_depth, wall]);
-            // Side wall
+            // Side wall - at X=0, extends in Y
             cube([wall, actual_depth, device_h + 2 * wall]);
         }
         // Ventilation slots
@@ -134,7 +134,6 @@ module angle_bracket_cage(
 }
 
 // Positioned version - places cage at offset from center (corner-based)
-// Rotated 90 degrees so brackets extend along Y-axis (front-to-back)
 module angle_bracket_cage_positioned(
     offset_x,
     offset_y,
@@ -145,8 +144,8 @@ module angle_bracket_cage_positioned(
     max_depth = 140,
     plate_thick = 4
 ) {
-    translate([offset_x + device_h/2, offset_y - device_w/2, plate_thick])
-    rotate([0, 0, 90])
+    actual_depth = min(max_depth, device_d + 20);
+    translate([offset_x - actual_depth/2, offset_y - device_w/2 - wall, plate_thick])
     angle_bracket_cage(device_w, device_h, device_d, wall, max_depth);
 }
 

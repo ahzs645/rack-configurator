@@ -12,8 +12,12 @@ import {
 } from '../utils/coordinates';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 import { DeviceOnRack } from './DeviceOnRack';
+import { RACK_CONSTANTS, type EarStyle, type EarPosition } from '../state/types';
 
 const PADDING = 40;
+
+// Ear dimensions based on EIA-310 rack standard
+const EAR_WIDTH = (RACK_CONSTANTS.FACEPLATE_WIDTH - RACK_CONSTANTS.PANEL_WIDTH) / 2; // ~15.875mm
 
 // Split line exclusion zone - devices (including cage walls) must not overlap
 // Components:
@@ -23,6 +27,167 @@ const PADDING = 40;
 // Total: ~10mm on each side of split line
 const SPLIT_MARGIN = 10; // mm on each side of split line
 const CAGE_WALL_THICKNESS = 6; // max cage wall thickness (heavy_device=2)
+
+// Hook dimensions from OpenSCAD backplate_profile (rack_ears.scad)
+// The hook profile: X range -12.1 to 0 (12.1mm), Y range 2.25 to 32.65 (30.4mm)
+const HOOK_HEIGHT = 30.4; // mm - total height of the hook profile
+
+// Render ear shapes based on style
+interface EarProps {
+  side: 'left' | 'right';
+  rackBounds: { x: number; y: number; width: number; height: number };
+  earStyle: EarStyle;
+  earPosition: EarPosition;
+  view: ViewConfig;
+}
+
+function RackEar({ side, rackBounds, earStyle, earPosition, view }: EarProps) {
+  if (earStyle === 'none') return null;
+
+  // Convert dimensions to SVG pixels
+  const hookHeightPx = rackSizeToSvg(HOOK_HEIGHT, view);
+
+  // Calculate hook Y position based on earPosition
+  // In SVG, Y increases downward, but in rack coords Y=0 is bottom
+  // rackBounds.y is the TOP of the rack in SVG coords
+  let hookOffsetY: number;
+  switch (earPosition) {
+    case 'top':
+      hookOffsetY = 0; // Hook at top
+      break;
+    case 'center':
+      hookOffsetY = (rackBounds.height - hookHeightPx) / 2; // Hook centered
+      break;
+    case 'bottom':
+    default:
+      hookOffsetY = rackBounds.height - hookHeightPx; // Hook at bottom
+      break;
+  }
+
+  const hookY = rackBounds.y + hookOffsetY;
+
+  // Position hook on left or right of rack panel
+  // For left side: hook extends to the left of the panel
+  // For right side: hook extends to the right of the panel
+  const panelEdgeX = side === 'left' ? rackBounds.x : rackBounds.x + rackBounds.width;
+
+  // The backplate_profile polygon from OpenSCAD (rack_ears.scad lines 84-99)
+  // Original OpenSCAD coordinates (X: -12.1 to 0, Y: 2.25 to 32.65)
+  // For SVG: flip Y axis (SVG Y = maxY - OpenSCAD_Y) and mirror X for left/right side
+  const renderToollessHook = () => {
+    const s = (mm: number) => rackSizeToSvg(mm, view);
+    const dir = side === 'left' ? -1 : 1;
+    const maxY = 32.65; // Top of hook in OpenSCAD coords
+
+    // Exact backplate_profile polygon points, converted to SVG coordinates
+    // OpenSCAD: Y increases up, X=0 is panel edge, negative X extends outward
+    // SVG: Y increases down, we flip Y and mirror X based on side
+    const points = [
+      // Start at A, go through polygon
+      { x: dir * 8.1, y: maxY - 12.55 },   // A
+      { x: dir * 4.7, y: maxY - 12.55 },   // B
+      { x: dir * 4.7, y: maxY - 2.25 },    // C
+      { x: 0, y: maxY - 2.25 },            // D (panel edge, bottom)
+      { x: 0, y: maxY - 32.65 },           // E (panel edge, top) = y:0
+      { x: dir * 12.1, y: maxY - 32.65 },  // F (outer edge, top)
+      { x: dir * 12.1, y: maxY - 22.65 },  // G
+      { x: dir * 8.1, y: maxY - 22.65 },   // H
+      { x: dir * 8.1, y: maxY - 28.15 },   // I
+      { x: dir * 4.7, y: maxY - 28.15 },   // J
+      { x: dir * 4.7, y: maxY - 17.05 },   // K
+      { x: dir * 12.1, y: maxY - 17.05 },  // L
+      { x: dir * 12.1, y: maxY - 7.05 },   // M
+      { x: dir * 8.1, y: maxY - 7.05 },    // N (back to A)
+    ];
+
+    const pathData = points.map((p, i) => {
+      const x = panelEdgeX + s(p.x);
+      const y = hookY + s(p.y);
+      return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+    }).join(' ') + ' Z';
+
+    return (
+      <path
+        d={pathData}
+        fill="#374151"
+        stroke="#4b5563"
+        strokeWidth={1.5}
+      />
+    );
+  };
+
+  const renderFusionEar = () => {
+    // Fusion style uses the same L-bracket as toolless but with mounting holes
+    // It's an L-shaped bracket that extends behind the panel
+    const earWidth = rackSizeToSvg(40, view); // Standard ear width
+
+    const earX = side === 'left'
+      ? panelEdgeX - earWidth
+      : panelEdgeX;
+
+    // Mounting hole position
+    const holeRadius = rackSizeToSvg(2.25, view);
+    const holeCenterX = earX + earWidth / 2;
+    const holeCenterY = hookY + hookHeightPx / 2;
+
+    return (
+      <g>
+        <rect
+          x={earX}
+          y={hookY}
+          width={earWidth}
+          height={hookHeightPx}
+          rx={rackSizeToSvg(2, view)}
+          fill="#374151"
+          stroke="#4b5563"
+          strokeWidth={1.5}
+        />
+        {/* Mounting hole */}
+        <circle
+          cx={holeCenterX}
+          cy={holeCenterY}
+          r={holeRadius}
+          fill="#1f2937"
+          stroke="#6b7280"
+          strokeWidth={1}
+        />
+      </g>
+    );
+  };
+
+  const renderSimpleEar = () => {
+    // Simple L-bracket - standard EIA ear width (~15.875mm)
+    const earWidthPx = rackSizeToSvg(EAR_WIDTH, view);
+    const earX = side === 'left'
+      ? panelEdgeX - earWidthPx
+      : panelEdgeX;
+
+    // Simple ear spans full rack height
+    return (
+      <rect
+        x={earX}
+        y={rackBounds.y}
+        width={earWidthPx}
+        height={rackBounds.height}
+        rx={rackSizeToSvg(2, view)}
+        fill="#374151"
+        stroke="#4b5563"
+        strokeWidth={1.5}
+      />
+    );
+  };
+
+  switch (earStyle) {
+    case 'toolless':
+      return renderToollessHook();
+    case 'fusion':
+      return renderFusionEar();
+    case 'simple':
+      return renderSimpleEar();
+    default:
+      return null;
+  }
+}
 
 export function RackConfigurator() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -347,6 +512,22 @@ export function RackConfigurator() {
           height="100%"
           fill="#111827"
           onMouseDown={handleBackgroundMouseDown}
+        />
+
+        {/* Rack ears (behind the panel) */}
+        <RackEar
+          side="left"
+          rackBounds={rackBounds}
+          earStyle={config.earStyle}
+          earPosition={config.earPosition}
+          view={view}
+        />
+        <RackEar
+          side="right"
+          rackBounds={rackBounds}
+          earStyle={config.earStyle}
+          earPosition={config.earPosition}
+          view={view}
         />
 
         {/* Rack panel outline */}
