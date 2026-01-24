@@ -3,7 +3,7 @@ import { useRackStore } from '../state/rack-store';
 import type { RackConfig } from '../state/types';
 import type { EarStyle, EarPosition } from '../state/types';
 import { EAR_STYLE_LABELS } from '../state/types';
-import { downloadScadFile, downloadConfigJson, generateScadCode, downloadStl } from '../utils/scad-generator';
+import { downloadScadFile, downloadConfigJson, generateScadCode, generateScadCodeForSide, downloadStl, downloadSplitStlZip } from '../utils/scad-generator';
 import { downloadBundledScadFile } from '../utils/scad-bundler';
 import { AdvancedSettingsModal } from './AdvancedSettingsModal';
 import { initializeWorker, renderScad, setStatusCallback, isWorkerReady } from '../worker/openscad-runner';
@@ -119,6 +119,109 @@ export function RackToolbar() {
         setRenderStatus(`Error: ${result.error || 'Unknown error'}`);
         console.error('Render failed:', result);
       }
+    } catch (e) {
+      setRenderStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      console.error('Export failed:', e);
+    } finally {
+      setIsRendering(false);
+      // Clear status after a delay
+      setTimeout(() => setRenderStatus(null), 3000);
+    }
+  };
+
+  const handleExportStlSide = async (side: 'left' | 'right') => {
+    if (isRendering) return;
+
+    setShowExportMenu(false);
+    setIsRendering(true);
+    setRenderStatus('Initializing...');
+
+    try {
+      // Set up status callback
+      setStatusCallback((status) => setRenderStatus(status));
+
+      // Initialize worker if needed
+      if (!isWorkerReady()) {
+        await initializeWorker();
+        setWorkerInitialized(true);
+      }
+
+      setRenderStatus(`Rendering ${side} side STL...`);
+
+      // Generate SCAD code for specific side
+      const scadCode = generateScadCodeForSide(config, side);
+
+      // Render to STL
+      const result = await renderScad({
+        scadCode,
+        outputFormat: 'stl',
+        variables: { '$preview': false },
+      });
+
+      if (result.success && result.output) {
+        downloadStl(result.output, config, side);
+        setRenderStatus('Done!');
+      } else {
+        setRenderStatus(`Error: ${result.error || 'Unknown error'}`);
+        console.error('Render failed:', result);
+      }
+    } catch (e) {
+      setRenderStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      console.error('Export failed:', e);
+    } finally {
+      setIsRendering(false);
+      // Clear status after a delay
+      setTimeout(() => setRenderStatus(null), 3000);
+    }
+  };
+
+  const handleExportStlZip = async () => {
+    if (isRendering) return;
+
+    setShowExportMenu(false);
+    setIsRendering(true);
+    setRenderStatus('Initializing...');
+
+    try {
+      // Set up status callback
+      setStatusCallback((status) => setRenderStatus(status));
+
+      // Initialize worker if needed
+      if (!isWorkerReady()) {
+        await initializeWorker();
+        setWorkerInitialized(true);
+      }
+
+      // Render left side
+      setRenderStatus('Rendering left side STL...');
+      const leftScadCode = generateScadCodeForSide(config, 'left');
+      const leftResult = await renderScad({
+        scadCode: leftScadCode,
+        outputFormat: 'stl',
+        variables: { '$preview': false },
+      });
+
+      if (!leftResult.success || !leftResult.output) {
+        throw new Error(leftResult.error || 'Failed to render left side');
+      }
+
+      // Render right side
+      setRenderStatus('Rendering right side STL...');
+      const rightScadCode = generateScadCodeForSide(config, 'right');
+      const rightResult = await renderScad({
+        scadCode: rightScadCode,
+        outputFormat: 'stl',
+        variables: { '$preview': false },
+      });
+
+      if (!rightResult.success || !rightResult.output) {
+        throw new Error(rightResult.error || 'Failed to render right side');
+      }
+
+      // Create and download ZIP
+      setRenderStatus('Creating ZIP...');
+      await downloadSplitStlZip(leftResult.output, rightResult.output, config);
+      setRenderStatus('Done!');
     } catch (e) {
       setRenderStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
       console.error('Export failed:', e);
@@ -386,14 +489,51 @@ export function RackToolbar() {
         {/* Dropdown Menu */}
         {showExportMenu && (
           <div className="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-600 rounded shadow-lg py-1 min-w-[220px] z-50">
-            <button
-              onClick={handleExportStl}
-              disabled={isRendering}
-              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
-            >
-              <span className="font-medium text-white">STL (3D Print Ready)</span>
-              <span className="text-xs text-gray-500">Renders via WebAssembly</span>
-            </button>
+            {config.isSplit ? (
+              <>
+                <button
+                  onClick={handleExportStlZip}
+                  disabled={isRendering}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+                >
+                  <span className="font-medium text-white">STL - Both Sides (ZIP)</span>
+                  <span className="text-xs text-gray-500">Separate STL files in a ZIP archive</span>
+                </button>
+                <button
+                  onClick={handleExportStl}
+                  disabled={isRendering}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+                >
+                  <span className="font-medium text-white">STL - Both Sides (Single File)</span>
+                  <span className="text-xs text-gray-500">Both halves in one STL</span>
+                </button>
+                <button
+                  onClick={() => handleExportStlSide('left')}
+                  disabled={isRendering}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+                >
+                  <span className="font-medium text-white">STL - Left Side Only</span>
+                  <span className="text-xs text-gray-500">Print-ready left half ({config.leftDevices.length} devices)</span>
+                </button>
+                <button
+                  onClick={() => handleExportStlSide('right')}
+                  disabled={isRendering}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+                >
+                  <span className="font-medium text-white">STL - Right Side Only</span>
+                  <span className="text-xs text-gray-500">Print-ready right half ({config.rightDevices.length} devices)</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleExportStl}
+                disabled={isRendering}
+                className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
+              >
+                <span className="font-medium text-white">STL (3D Print Ready)</span>
+                <span className="text-xs text-gray-500">Renders via WebAssembly</span>
+              </button>
+            )}
             <div className="border-t border-gray-700 my-1" />
             <button
               onClick={handleExportScad}

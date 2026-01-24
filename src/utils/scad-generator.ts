@@ -1,5 +1,6 @@
 import type { RackConfig, PlacedDevice } from '../state/types';
 import { getDevice } from '../data/devices';
+import JSZip from 'jszip';
 
 /**
  * Generate OpenSCAD code from a rack configuration
@@ -152,15 +153,22 @@ export function getPlacedDeviceDimensions(device: PlacedDevice): {
 /**
  * Generate a default filename based on configuration
  */
-export function generateFilename(config: RackConfig, extension: string): string {
+export function generateFilename(config: RackConfig, extension: string, side?: 'left' | 'right'): string {
   const parts = [`rack_${config.rackU}u`];
 
   if (config.isSplit) {
     parts.push('split');
+    if (side) {
+      parts.push(side);
+    }
   }
 
   const deviceCount = config.isSplit
-    ? config.leftDevices.length + config.rightDevices.length
+    ? side === 'left'
+      ? config.leftDevices.length
+      : side === 'right'
+        ? config.rightDevices.length
+        : config.leftDevices.length + config.rightDevices.length
     : config.devices.length;
 
   if (deviceCount > 0) {
@@ -246,7 +254,49 @@ export function downloadArrayBuffer(data: ArrayBuffer, filename: string, mimeTyp
 /**
  * Download STL data
  */
-export function downloadStl(data: ArrayBuffer, config: RackConfig): void {
-  const filename = generateFilename(config, 'stl');
+export function downloadStl(data: ArrayBuffer, config: RackConfig, side?: 'left' | 'right'): void {
+  const filename = generateFilename(config, 'stl', side);
   downloadArrayBuffer(data, filename, 'application/sla');
+}
+
+/**
+ * Generate SCAD code for a specific side of a split panel
+ */
+export function generateScadCodeForSide(config: RackConfig, side: 'left' | 'right'): string {
+  const renderMode = side === 'left' ? 'left_print' : 'right_print';
+  return generateScadCode({ ...config, renderMode }, false);
+}
+
+/**
+ * Download both split sides as separate STL files in a ZIP
+ */
+export async function downloadSplitStlZip(
+  leftStl: ArrayBuffer,
+  rightStl: ArrayBuffer,
+  config: RackConfig
+): Promise<void> {
+  const zip = new JSZip();
+
+  // Generate filenames for each side
+  const leftFilename = generateFilename(config, 'stl', 'left');
+  const rightFilename = generateFilename(config, 'stl', 'right');
+
+  // Add both STL files to the ZIP
+  zip.file(leftFilename, leftStl);
+  zip.file(rightFilename, rightStl);
+
+  // Generate ZIP filename
+  const zipFilename = `rack_${config.rackU}u_split_${config.leftDevices.length + config.rightDevices.length}dev.zip`;
+
+  // Generate and download the ZIP
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(zipBlob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = zipFilename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
