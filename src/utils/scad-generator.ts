@@ -94,6 +94,9 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
 
 /**
  * Generate the devices array in OpenSCAD syntax
+ * Device format: ["device_id", offsetX, offsetY, mountType, backStyle]
+ * Custom device format: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle]
+ * backStyle can be "default" to use global setting, or "solid"/"vent"/"none" for override
  */
 function generateDevicesArray(devices: PlacedDevice[]): string {
   if (devices.length === 0) {
@@ -101,12 +104,15 @@ function generateDevicesArray(devices: PlacedDevice[]): string {
   }
 
   const deviceStrings = devices.map((device) => {
+    // Use "default" if no per-device backStyle is set, otherwise use the specific style
+    const backStyle = device.backStyle || 'default';
+
     if (device.deviceId === 'custom') {
-      // Custom device: ["custom", offsetX, offsetY, mountType, [w, h, d], "name"]
-      return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}"]`;
+      // Custom device: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle]
+      return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}"]`;
     } else {
-      // Standard device: ["device_id", offsetX, offsetY, mountType]
-      return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}"]`;
+      // Standard device: ["device_id", offsetX, offsetY, mountType, backStyle]
+      return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}"]`;
     }
   });
 

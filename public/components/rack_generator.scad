@@ -78,6 +78,14 @@ function _get_dev_name(device_entry) =
         ? (len(device_entry) > 5 ? device_entry[5] : "Custom")
         : device_name(device_entry[0]);
 
+// Get per-device back style (returns "default" if not specified)
+// Standard device: ["device_id", offsetX, offsetY, mountType, backStyle]
+// Custom device: ["custom", offsetX, offsetY, mountType, [w,h,d], "name", backStyle]
+function _get_dev_back_style(device_entry) =
+    device_entry[0] == "custom"
+        ? (len(device_entry) > 6 ? device_entry[6] : "default")
+        : (len(device_entry) > 4 ? device_entry[4] : "default");
+
 // ============================================================================
 // MAIN RACK FACEPLATE MODULE
 // Creates a complete single-piece rack faceplate with devices
@@ -394,6 +402,7 @@ module _rg_simple_ear_holes(x_pos, rack_u, plate_thick) {
 
 // Device mount structure dispatcher
 // back_style: "solid" = solid back, "vent" = ventilated back, "none" = no back
+// global_back_style: the default back style from config
 module _rg_device_mount(
     device_entry,
     plate_thick,
@@ -401,7 +410,7 @@ module _rg_device_mount(
     heavy,
     hex_dia,
     hex_wall,
-    back_style,
+    global_back_style,
     cutout_edge = 5,
     cutout_radius = 5
 ) {
@@ -412,9 +421,13 @@ module _rg_device_mount(
     offset_y = -_get_dev_y(device_entry);  // Flip Y for cage coords
     mount_type = _get_dev_mount(device_entry);
 
+    // Get per-device back style, use global if "default"
+    dev_back_style = _get_dev_back_style(device_entry);
+    effective_back_style = (dev_back_style == "default") ? global_back_style : dev_back_style;
+
     // Convert back_style string to cage parameters
-    _back_open = (back_style == "vent");
-    _no_back = (back_style == "none");
+    _back_open = (effective_back_style == "vent");
+    _no_back = (effective_back_style == "none");
 
     if (mount_type == "cage") {
         cage_structure(

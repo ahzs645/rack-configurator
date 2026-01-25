@@ -50,6 +50,9 @@ async function fetchComponents(): Promise<Map<string, string>> {
 
 /**
  * Generate devices array in OpenSCAD syntax
+ * Device format: ["device_id", offsetX, offsetY, mountType, backStyle]
+ * Custom device format: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle]
+ * backStyle can be "default" to use global setting, or "solid"/"vent"/"none" for override
  */
 function generateDevicesArray(devices: PlacedDevice[]): string {
   if (devices.length === 0) {
@@ -57,10 +60,13 @@ function generateDevicesArray(devices: PlacedDevice[]): string {
   }
 
   const deviceStrings = devices.map((device) => {
+    // Use "default" if no per-device backStyle is set, otherwise use the specific style
+    const backStyle = device.backStyle || 'default';
+
     if (device.deviceId === 'custom') {
-      return `    ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}"]`;
+      return `    ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}"]`;
     } else {
-      return `    ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}"]`;
+      return `    ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}"]`;
     }
   });
 

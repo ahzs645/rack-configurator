@@ -1,6 +1,6 @@
 import { useRackStore } from '../state/rack-store';
-import type { VentType, RenderMode } from '../state/types';
-import { RENDER_MODE_LABELS } from '../state/types';
+import type { VentType, RenderMode, BackStyle } from '../state/types';
+import { RENDER_MODE_LABELS, BACK_STYLE_LABELS } from '../state/types';
 
 interface AdvancedSettingsModalProps {
   onClose: () => void;
@@ -19,6 +19,7 @@ export function AdvancedSettingsModal({ onClose }: AdvancedSettingsModalProps) {
     setCutoutEdge,
     setCutoutRadius,
     setHeavyDevice,
+    setBackStyle,
     setShowPreview,
     setShowLabels,
     setRenderMode,
@@ -170,6 +171,26 @@ export function AdvancedSettingsModal({ onClose }: AdvancedSettingsModalProps) {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Back Panel Settings */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-300 mb-3">Back Panel</h3>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Default Back Style</label>
+              <select
+                value={config.backStyle}
+                onChange={(e) => setBackStyle(e.target.value as BackStyle)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+              >
+                {Object.entries(BACK_STYLE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Default back style for device cages. Can be overridden per-device.</p>
             </div>
           </div>
 
