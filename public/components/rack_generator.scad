@@ -520,7 +520,7 @@ module _rg_device_mount(
         // Ventilated shelf with lips
         ventilated_shelf_positioned(
             offset_x, offset_y,
-            dev_w, dev_d,
+            dev_w, dev_d, dev_h,
             3, 5, true, true, plate_thick
         );
     }
@@ -530,6 +530,7 @@ module _rg_device_mount(
             offset_x, offset_y,
             dev_w, dev_d,
             dev_h,  // Use device height as wall height
+            dev_h,  // device_h for positioning
             0, plate_thick
         );
     }

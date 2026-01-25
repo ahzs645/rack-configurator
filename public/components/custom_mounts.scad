@@ -307,7 +307,7 @@ module tray_mount(
     }
 }
 
-// Positioned version
+// Positioned version - builds directly in rack coordinates (Z = depth)
 module tray_mount_positioned(
     offset_x,
     offset_y,
@@ -319,11 +319,34 @@ module tray_mount_positioned(
     lip_style = "sides",
     plate_thick = 4
 ) {
-    tray_w = device_w + 2 + 2*wall;
-    tray_d = device_d + 5 + wall;
+    tray_w = device_w + 2;
+    actual_depth = device_d + 5;
+    actual_lip = lip_height > 0 ? lip_height : device_h * 0.3;
 
-    translate([offset_x - tray_w/2, offset_y - (device_h/2), plate_thick])
-    tray_mount(device_w, device_h, device_d, wall, lip_height, lip_style);
+    translate([offset_x - tray_w/2 - wall, offset_y - device_h/2, plate_thick]) {
+        // Base tray floor (extends in Z for depth)
+        cube([tray_w + 2*wall, wall, actual_depth]);
+
+        // Side lips (extend in +Y for height)
+        if (lip_style == "full" || lip_style == "sides") {
+            // Left lip
+            cube([wall, wall + actual_lip, actual_depth]);
+            // Right lip
+            translate([tray_w + wall, 0, 0])
+            cube([wall, wall + actual_lip, actual_depth]);
+        }
+
+        // Back lip
+        if (lip_style == "full" || lip_style == "back") {
+            translate([0, 0, actual_depth - wall])
+            cube([tray_w + 2*wall, wall + actual_lip, wall]);
+        }
+
+        // Front lip (only for full)
+        if (lip_style == "full") {
+            cube([tray_w + 2*wall, wall + actual_lip * 0.5, wall]);
+        }
+    }
 }
 
 // ============================================================================
@@ -680,21 +703,68 @@ module ventilated_shelf(
     }
 }
 
-// Positioned version for rack generator
+// Positioned version for rack generator - builds directly in rack coordinates (Z = depth)
 module ventilated_shelf_positioned(
     offset_x,
     offset_y,
     width,
     depth,
+    device_h = 0,
     thickness = 3,
     lip_height = 5,
     vent_slots = true,
     cable_slot = true,
     plate_thick = 4
 ) {
-    translate([offset_x - width/2, offset_y, plate_thick])
-    ventilated_shelf(width, depth, thickness, lip_height,
-                     [false, true, true, true], vent_slots, cable_slot);
+    lip_thick = 2;
+    margin = 20;
+    slot_length = 40;
+    slot_width = 6;
+    slot_spacing_x = 50;
+    slot_spacing_z = 30;
+    // Use device_h if provided, otherwise use thickness as fallback
+    y_offset = device_h > 0 ? device_h/2 : thickness;
+
+    translate([offset_x - width/2, offset_y - y_offset, plate_thick]) {
+        difference() {
+            union() {
+                // Base plate (extends in Z for depth)
+                cube([width, thickness, depth]);
+
+                // Lips (extend in +Y for height)
+                if (lip_height > 0) {
+                    // Back lip
+                    translate([0, 0, depth - lip_thick])
+                    cube([width, thickness + lip_height, lip_thick]);
+
+                    // Left lip
+                    cube([lip_thick, thickness + lip_height, depth]);
+
+                    // Right lip
+                    translate([width - lip_thick, 0, 0])
+                    cube([lip_thick, thickness + lip_height, depth]);
+                }
+            }
+
+            // Ventilation slots
+            if (vent_slots) {
+                for (x = [margin : slot_spacing_x : width - margin - slot_length]) {
+                    for (z = [margin : slot_spacing_z : depth - margin]) {
+                        translate([x, -_CM_EPS, z - slot_width/2])
+                        cube([slot_length, thickness + 2*_CM_EPS, slot_width]);
+                    }
+                }
+            }
+
+            // Cable routing slot at back
+            if (cable_slot) {
+                cable_w = min(width * 0.4, 120);
+                cable_d = 10;
+                translate([(width - cable_w)/2, -_CM_EPS, depth - margin - cable_d])
+                cube([cable_w, thickness + 2*_CM_EPS, cable_d]);
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -740,16 +810,39 @@ module storage_tray(
     }
 }
 
-// Positioned version for rack generator
+// Positioned version for rack generator - builds directly in rack coordinates (Z = depth)
 module storage_tray_positioned(
     offset_x,
     offset_y,
     width,
     depth,
     wall_height = 30,
+    device_h = 0,
     dividers = 0,
     plate_thick = 4
 ) {
-    translate([offset_x - width/2, offset_y, plate_thick])
-    storage_tray(width, depth, wall_height, 2, 3, dividers);
+    wall_thickness = 2;
+    base_thickness = 3;
+    // Use device_h for positioning if provided, otherwise use wall_height
+    y_offset = device_h > 0 ? device_h/2 : wall_height/2;
+
+    translate([offset_x - width/2, offset_y - y_offset, plate_thick]) {
+        difference() {
+            // Outer shell (extends in Z for depth, Y for height)
+            cube([width, base_thickness + wall_height, depth]);
+
+            // Inner cavity
+            translate([wall_thickness, base_thickness, wall_thickness])
+            cube([width - wall_thickness*2, wall_height + _CM_EPS, depth - wall_thickness*2]);
+        }
+
+        // Optional dividers
+        if (dividers > 0) {
+            divider_spacing = (width - wall_thickness*2) / (dividers + 1);
+            for (i = [1 : dividers]) {
+                translate([wall_thickness + i * divider_spacing - wall_thickness/2, base_thickness, wall_thickness])
+                cube([wall_thickness, wall_height * 0.8, depth - wall_thickness*2]);
+            }
+        }
+    }
 }
