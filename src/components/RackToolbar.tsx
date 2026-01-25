@@ -6,6 +6,8 @@ import { EAR_STYLE_LABELS } from '../state/types';
 import { downloadScadFile, downloadConfigJson, generateScadCode, generateScadCodeForSide, downloadStl, downloadSplitStlZip } from '../utils/scad-generator';
 import { downloadBundledScadFile } from '../utils/scad-bundler';
 import { AdvancedSettingsModal } from './AdvancedSettingsModal';
+import { RecentRacks } from './RecentRacks';
+import { saveRecentRack } from '../utils/recent-racks-db';
 import { initializeWorker, renderScad, setStatusCallback, isWorkerReady } from '../worker/openscad-runner';
 
 export function RackToolbar() {
@@ -36,9 +38,15 @@ export function RackToolbar() {
     loadConfig,
   } = useRackStore();
 
-  const handleExportScad = () => {
+  const handleExportScad = async () => {
     downloadScadFile(config);
     setShowExportMenu(false);
+    // Save to recent racks
+    try {
+      await saveRecentRack(config);
+    } catch (e) {
+      console.error('Failed to save to recent racks:', e);
+    }
   };
 
   const handleExportBundledScad = async () => {
@@ -47,6 +55,8 @@ export function RackToolbar() {
     try {
       await downloadBundledScadFile(config);
       setRenderStatus('Done!');
+      // Save to recent racks
+      await saveRecentRack(config);
     } catch (e) {
       setRenderStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
     } finally {
@@ -56,9 +66,15 @@ export function RackToolbar() {
     }
   };
 
-  const handleExportJson = () => {
+  const handleExportJson = async () => {
     downloadConfigJson(config);
     setShowExportMenu(false);
+    // Save to recent racks
+    try {
+      await saveRecentRack(config);
+    } catch (e) {
+      console.error('Failed to save to recent racks:', e);
+    }
   };
 
   const handleLoadConfig = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,6 +131,8 @@ export function RackToolbar() {
       if (result.success && result.output) {
         downloadStl(result.output, config);
         setRenderStatus('Done!');
+        // Save to recent racks
+        await saveRecentRack(config);
       } else {
         setRenderStatus(`Error: ${result.error || 'Unknown error'}`);
         console.error('Render failed:', result);
@@ -161,6 +179,8 @@ export function RackToolbar() {
       if (result.success && result.output) {
         downloadStl(result.output, config, side);
         setRenderStatus('Done!');
+        // Save to recent racks
+        await saveRecentRack(config);
       } else {
         setRenderStatus(`Error: ${result.error || 'Unknown error'}`);
         console.error('Render failed:', result);
@@ -222,6 +242,8 @@ export function RackToolbar() {
       setRenderStatus('Creating ZIP...');
       await downloadSplitStlZip(leftResult.output, rightResult.output, config);
       setRenderStatus('Done!');
+      // Save to recent racks
+      await saveRecentRack(config);
     } catch (e) {
       setRenderStatus(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
       console.error('Export failed:', e);
@@ -230,6 +252,11 @@ export function RackToolbar() {
       // Clear status after a delay
       setTimeout(() => setRenderStatus(null), 3000);
     }
+  };
+
+  const handleRecentRackLoaded = () => {
+    setRenderStatus('Config loaded!');
+    setTimeout(() => setRenderStatus(null), 2000);
   };
 
   return (
@@ -437,6 +464,9 @@ export function RackToolbar() {
 
       {/* Divider */}
       <div className="w-px h-6 bg-gray-600" />
+
+      {/* Recent Racks */}
+      <RecentRacks onLoad={handleRecentRackLoaded} />
 
       {/* Load Config */}
       <input
