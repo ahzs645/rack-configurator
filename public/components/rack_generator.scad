@@ -494,7 +494,8 @@ module _rg_device_mount(
         _rg_enclosed_box_rails(dev_w, dev_h, dev_d);
     }
     else if (mount_type == "angle" || mount_type == "angle_bracket") {
-        translate([offset_x - dev_w/2 - _RG_WALL, offset_y, plate_thick])
+        translate([offset_x - dev_w/2 - _RG_WALL, offset_y + dev_h/2 + _RG_WALL, plate_thick])
+        rotate([90, 0, 0])
         angle_bracket_cage(dev_w, dev_h, dev_d);
     }
     else if (mount_type == "simple" || mount_type == "box") {
