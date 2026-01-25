@@ -323,8 +323,9 @@ module tray_mount_positioned(
     actual_depth = device_d + 5;
     actual_lip = lip_height > 0 ? lip_height : device_h * 0.3;
 
-    translate([offset_x - tray_w/2 - wall, offset_y - device_h/2, plate_thick]) {
-        // Base tray floor (extends in Z for depth)
+    translate([offset_x - tray_w/2 - wall, offset_y - device_h/2, plate_thick])
+    mirror([0, 0, 1]) {
+        // Base tray floor (extends in -Z for depth into rack)
         cube([tray_w + 2*wall, wall, actual_depth]);
 
         // Side lips (extend in +Y for height)
@@ -725,10 +726,11 @@ module ventilated_shelf_positioned(
     // Use device_h if provided, otherwise use thickness as fallback
     y_offset = device_h > 0 ? device_h/2 : thickness;
 
-    translate([offset_x - width/2, offset_y - y_offset, plate_thick]) {
+    translate([offset_x - width/2, offset_y - y_offset, plate_thick])
+    mirror([0, 0, 1]) {
         difference() {
             union() {
-                // Base plate (extends in Z for depth)
+                // Base plate (extends in -Z for depth into rack)
                 cube([width, thickness, depth]);
 
                 // Lips (extend in +Y for height)
@@ -826,9 +828,10 @@ module storage_tray_positioned(
     // Use device_h for positioning if provided, otherwise use wall_height
     y_offset = device_h > 0 ? device_h/2 : wall_height/2;
 
-    translate([offset_x - width/2, offset_y - y_offset, plate_thick]) {
+    translate([offset_x - width/2, offset_y - y_offset, plate_thick])
+    mirror([0, 0, 1]) {
         difference() {
-            // Outer shell (extends in Z for depth, Y for height)
+            // Outer shell (extends in -Z for depth into rack, Y for height)
             cube([width, base_thickness + wall_height, depth]);
 
             // Inner cavity
