@@ -40,7 +40,7 @@ use <joiners.scad>
 use <rack_ears.scad>
 include <constants.scad>
 include <devices.scad>
-use <../rack_mounts/enclosed_box.scad>
+include <../rack_mounts/enclosed_box.scad>
 
 // ============================================================================
 // CONFIGURATION DEFAULTS
@@ -52,6 +52,7 @@ _RG_DEFAULT_HEX_DIA = 8;
 _RG_DEFAULT_HEX_WALL = 2;
 _RG_DEFAULT_PLATE_THICK = 4;
 _RG_DEFAULT_HEAVY = 0;
+_RG_WALL = 3;  // Default wall thickness
 
 _RG_EPS = 0.01;
 
@@ -533,7 +534,7 @@ module _rg_device_mount(
     }
 }
 
-// Enclosed box using library rails
+// Enclosed box using library rails from rack_mounts/enclosed_box.scad
 module _rg_enclosed_box_rails(dev_w, dev_h, dev_d) {
     rail_thickness = 1.5;
     rail_side_thick = 3;
@@ -547,11 +548,11 @@ module _rg_enclosed_box_rails(dev_w, dev_h, dev_d) {
     side_support_rail_base(
         top = true,
         recess = false,
-        defaultThickness = rail_thickness,
         supportedZ = dev_h,
         supportedY = dev_d,
         supportedX = dev_w,
         zOrientation = "middle",
+        defaultThickness = rail_thickness,
         railSideThickness = rail_side_thick,
         sideVent = true
     );
@@ -563,11 +564,11 @@ module _rg_enclosed_box_rails(dev_w, dev_h, dev_d) {
     side_support_rail_base(
         top = true,
         recess = false,
-        defaultThickness = rail_thickness,
         supportedZ = dev_h,
         supportedY = dev_d,
         supportedX = dev_w,
         zOrientation = "middle",
+        defaultThickness = rail_thickness,
         railSideThickness = rail_side_thick,
         sideVent = true
     );

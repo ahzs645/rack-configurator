@@ -162,13 +162,22 @@ async function createOpenSCADInstance() {
             );
             instance.FS.mount(BFS, { root: '/libraries' }, '/libraries');
 
-            // Create symlink so components/ resolves correctly
+            // Create symlinks so components/ and rack_mounts/ resolve correctly
             try {
               instance.FS.symlink('/libraries/components', '/components');
             } catch (e) {
               // Alternative: mount directly at /components
               try { instance.FS.mkdir('/components'); } catch(e) {}
               instance.FS.mount(BFS, { root: '/libraries/components' }, '/components');
+            }
+
+            // Also create symlink for rack_mounts so ../rack_mounts/ includes work
+            try {
+              instance.FS.symlink('/libraries/rack_mounts', '/rack_mounts');
+            } catch (e) {
+              // Alternative: mount directly at /rack_mounts
+              try { instance.FS.mkdir('/rack_mounts'); } catch(e) {}
+              instance.FS.mount(BFS, { root: '/libraries/rack_mounts' }, '/rack_mounts');
             }
           } catch (e) {
             console.error('[OpenSCAD Worker] Failed to mount rack-scad library:', e);
