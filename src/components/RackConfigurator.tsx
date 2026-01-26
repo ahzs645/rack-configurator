@@ -543,7 +543,7 @@ export function RackConfigurator() {
           rackBounds={rackBounds}
           earStyle={config.earStyle}
           earPosition={config.earPosition}
-          hookPattern={config.toollessHookPattern}
+          hookPattern={config.toollessHookPattern || [true]}
           rackU={config.rackU}
           view={view}
         />
@@ -552,7 +552,7 @@ export function RackConfigurator() {
           rackBounds={rackBounds}
           earStyle={config.earStyle}
           earPosition={config.earPosition}
-          hookPattern={config.toollessHookPattern}
+          hookPattern={config.toollessHookPattern || [true]}
           rackU={config.rackU}
           view={view}
         />

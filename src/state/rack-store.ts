@@ -624,11 +624,18 @@ export const useRackStore = create<RackStore>((set, get) => ({
   setLastRenderTime: (lastRenderTime) => set({ lastRenderTime }),
 
   // Configuration
-  loadConfig: (config) =>
+  loadConfig: (config) => {
+    // Migrate old configs that don't have toollessHookPattern
+    const hookCount = getToollessHookCount(config.rackU);
+    const migratedConfig = {
+      ...config,
+      toollessHookPattern: config.toollessHookPattern || Array(hookCount).fill(true),
+    };
     set({
-      config,
+      config: migratedConfig,
       selectedDeviceId: null,
-    }),
+    });
+  },
 
   resetConfig: () =>
     set({

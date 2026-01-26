@@ -9,7 +9,8 @@ export function ToollessHooksModal({ onClose }: ToollessHooksModalProps) {
   const { config, toggleToollessHook, setToollessHookPattern } = useRackStore();
 
   const hookCount = getToollessHookCount(config.rackU);
-  const enabledCount = config.toollessHookPattern.filter(h => h).length;
+  const hookPattern = config.toollessHookPattern || Array(hookCount).fill(true);
+  const enabledCount = hookPattern.filter(h => h).length;
 
   const handleEnableAll = () => {
     setToollessHookPattern(Array(hookCount).fill(true));
@@ -63,7 +64,7 @@ export function ToollessHooksModal({ onClose }: ToollessHooksModalProps) {
           {/* Hook list */}
           <div className="space-y-2">
             {Array.from({ length: hookCount }).map((_, i) => {
-              const isEnabled = config.toollessHookPattern[i] ?? true;
+              const isEnabled = hookPattern[i] ?? true;
               const positionMm = Math.round(i * TOOLLESS_HOOK_SPACING * 10) / 10;
               const isOnlyEnabled = enabledCount === 1 && isEnabled;
 
