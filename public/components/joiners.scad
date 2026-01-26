@@ -70,6 +70,10 @@ function joiner_default_depth(screw_type) =
     (screw_type == "1/4-20") ? 6.0 :
     4.5;  // Default M5
 
+// Default captive nut floor thickness (thin layer covering the nut pocket)
+// Set to 0 for open pocket, > 0 for captive nut
+_DEFAULT_NUT_FLOOR = 0;
+
 // EIA-310 standard
 _EIA_UNIT_HEIGHT = 44.45;      // 1U = 44.45mm
 _EIA_PANEL_HEIGHT = 43.66;     // Panel height (1U minus clearance)
@@ -181,6 +185,7 @@ module joiner_wall(
  * @param nut_side - "left" for nut pockets on this side, "right" for clearance holes only
  * @param nut_pocket_depth - depth of the hex nut pocket (0 = auto based on screw type)
  * @param screw_type - screw size: "M3", "M4", "M5", "M6", "4-40", "6-32", "8-32", "10-24", "1/4-20"
+ * @param nut_floor - thickness of floor covering nut pocket (0 = open pocket, >0 = captive nut)
  */
 module faceplate_joiner_left(
     unit_height = 1,
@@ -193,6 +198,7 @@ module faceplate_joiner_left(
     nut_side = "right",
     nut_pocket_depth = 0,
     screw_type = "M5",
+    nut_floor = _DEFAULT_NUT_FLOOR,
     fn = 32
 ) {
     panel_height = unit_height * _EIA_PANEL_HEIGHT;
@@ -229,18 +235,24 @@ module faceplate_joiner_left(
             z_height = pos[1];
             screw_z = faceplate_thickness + z_height;
 
-            // Through hole
+            // Through hole for bolt (smaller diameter, goes all the way through)
             translate([-wall_thickness/2, y_pos, screw_z])
                 rotate([0, 90, 0])
                     cylinder(h = wall_thickness + 2, d = clearance_dia, center = true, $fn = fn);
 
-            // Hex nut pocket on outer face (if this side has nuts)
+            // Hex nut pocket (if this side has nuts)
             if (has_nut) {
-                // Hexagonal pocket for nut
-                translate([-wall_thickness - 0.1, y_pos, screw_z])
+                // Captive nut pocket: starts after floor thickness, recessed into the wall
+                // Floor is on the OUTER face (away from joint), nut is inserted from inside
+                // pocket_start is distance from outer face where hex pocket begins
+                pocket_start = nut_floor;
+
+                // Hexagonal pocket for captive nut
+                // Starts at outer face + floor, extends inward
+                translate([-wall_thickness + pocket_start, y_pos, screw_z])
                     rotate([0, 90, 0])
                         rotate([0, 0, 30])
-                            linear_extrude(height = pocket_depth + 0.5)
+                            linear_extrude(height = pocket_depth + 0.1)
                                 hexagon_2d(nut_af);
             }
         }
@@ -254,6 +266,7 @@ module faceplate_joiner_left(
  * @param nut_side - "right" for nut pockets on this side, "left" for clearance holes only
  * @param nut_pocket_depth - depth of the hex nut pocket (0 = auto based on screw type)
  * @param screw_type - screw size: "M3", "M4", "M5", "M6", "4-40", "6-32", "8-32", "10-24", "1/4-20"
+ * @param nut_floor - thickness of floor covering nut pocket (0 = open pocket, >0 = captive nut)
  */
 module faceplate_joiner_right(
     unit_height = 1,
@@ -266,6 +279,7 @@ module faceplate_joiner_right(
     nut_side = "right",
     nut_pocket_depth = 0,
     screw_type = "M5",
+    nut_floor = _DEFAULT_NUT_FLOOR,
     fn = 32
 ) {
     panel_height = unit_height * _EIA_PANEL_HEIGHT;
@@ -302,18 +316,24 @@ module faceplate_joiner_right(
             z_height = pos[1];
             screw_z = faceplate_thickness + z_height;
 
-            // Through hole
+            // Through hole for bolt (smaller diameter, goes all the way through)
             translate([wall_thickness/2, y_pos, screw_z])
                 rotate([0, 90, 0])
                     cylinder(h = wall_thickness + 2, d = clearance_dia, center = true, $fn = fn);
 
-            // Hex nut pocket on outer face (if this side has nuts)
+            // Hex nut pocket (if this side has nuts)
             if (has_nut) {
-                // Hexagonal pocket for nut
-                translate([wall_thickness - pocket_depth + 0.1, y_pos, screw_z])
+                // Captive nut pocket: starts after floor thickness, recessed into the wall
+                // Floor is on the OUTER face (away from joint), nut is inserted from inside
+                pocket_start = nut_floor;
+
+                // Hexagonal pocket for captive nut
+                // For right side: outer face is at x=wall_thickness
+                // Pocket starts at (wall_thickness - pocket_start - pocket_depth) and goes toward outer face
+                translate([wall_thickness - pocket_start - pocket_depth, y_pos, screw_z])
                     rotate([0, 90, 0])
                         rotate([0, 0, 30])
-                            linear_extrude(height = pocket_depth + 0.5)
+                            linear_extrude(height = pocket_depth + 0.1)
                                 hexagon_2d(nut_af);
             }
         }
@@ -326,6 +346,7 @@ module faceplate_joiner_right(
  * @param nut_side - "left" or "right" to specify which side has the nut pockets
  * @param nut_pocket_depth - depth of the hex nut pocket (0 = auto)
  * @param screw_type - screw size: "M3", "M4", "M5", "M6", etc.
+ * @param nut_floor - thickness of floor covering nut pocket (0 = open pocket, >0 = captive nut)
  */
 module faceplate_joiner_pair(
     unit_height = 1,
@@ -334,6 +355,7 @@ module faceplate_joiner_pair(
     nut_side = "right",
     nut_pocket_depth = 0,
     screw_type = "M5",
+    nut_floor = _DEFAULT_NUT_FLOOR,
     fn = 32
 ) {
     // Left side
@@ -346,6 +368,7 @@ module faceplate_joiner_pair(
                 nut_side = nut_side,
                 nut_pocket_depth = nut_pocket_depth,
                 screw_type = screw_type,
+                nut_floor = nut_floor,
                 fn = fn
             );
 
@@ -359,6 +382,7 @@ module faceplate_joiner_pair(
                 nut_side = nut_side,
                 nut_pocket_depth = nut_pocket_depth,
                 screw_type = screw_type,
+                nut_floor = nut_floor,
                 fn = fn
             );
 }
@@ -369,6 +393,7 @@ module faceplate_joiner_pair(
  * @param nut_side - "left" or "right" to specify which side has the nut pockets
  * @param nut_pocket_depth - depth of the hex nut pocket (0 = auto based on screw type)
  * @param screw_type - screw size: "M3", "M4", "M5", "M6", "4-40", "6-32", "8-32", "10-24", "1/4-20"
+ * @param nut_floor - thickness of floor covering nut pocket (0 = open pocket, >0 = captive nut)
  */
 module faceplate_joiner_assembled(
     unit_height = 1,
@@ -377,6 +402,7 @@ module faceplate_joiner_assembled(
     nut_side = "right",
     nut_pocket_depth = 0,
     screw_type = "M5",
+    nut_floor = _DEFAULT_NUT_FLOOR,
     fn = 32
 ) {
     pocket_depth = (nut_pocket_depth > 0) ? nut_pocket_depth : joiner_default_depth(screw_type);
@@ -390,6 +416,7 @@ module faceplate_joiner_assembled(
                 nut_side = nut_side,
                 nut_pocket_depth = pocket_depth,
                 screw_type = screw_type,
+                nut_floor = nut_floor,
                 fn = fn
             );
 
@@ -403,6 +430,7 @@ module faceplate_joiner_assembled(
                 nut_side = nut_side,
                 nut_pocket_depth = pocket_depth,
                 screw_type = screw_type,
+                nut_floor = nut_floor,
                 fn = fn
             );
 }
@@ -414,6 +442,7 @@ module faceplate_joiner_assembled(
  * @param nut_side - "left" or "right" to specify which side has the nut pockets
  * @param nut_pocket_depth - depth of the hex nut pocket (0 = auto based on screw type)
  * @param screw_type - screw size: "M3", "M4", "M5", "M6", "4-40", "6-32", "8-32", "10-24", "1/4-20"
+ * @param nut_floor - thickness of floor covering nut pocket (0 = open pocket, >0 = captive nut)
  */
 module joiner_wall_addon(
     unit_height = 1,
@@ -421,6 +450,7 @@ module joiner_wall_addon(
     nut_side = "right",
     nut_pocket_depth = 0,
     screw_type = "M5",
+    nut_floor = _DEFAULT_NUT_FLOOR,
     fn = 32
 ) {
     pocket_depth = (nut_pocket_depth > 0) ? nut_pocket_depth : joiner_default_depth(screw_type);
@@ -432,6 +462,7 @@ module joiner_wall_addon(
             nut_side = nut_side,
             nut_pocket_depth = pocket_depth,
             screw_type = screw_type,
+            nut_floor = nut_floor,
             fn = fn
         );
     } else {
@@ -441,6 +472,7 @@ module joiner_wall_addon(
             nut_side = nut_side,
             nut_pocket_depth = pocket_depth,
             screw_type = screw_type,
+            nut_floor = nut_floor,
             fn = fn
         );
     }

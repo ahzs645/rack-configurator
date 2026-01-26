@@ -112,7 +112,8 @@ function generateRenderCall(config: RackConfig): string {
     lines.push(`    render_part = "${config.renderMode}",`);
     lines.push(`    joiner_nut_side = "${config.joinerNutSide || 'right'}",`);
     lines.push(`    joiner_nut_depth = ${config.joinerNutDepth || 4.5},`);
-    lines.push(`    joiner_screw_type = "${config.joinerScrewType || 'M5'}"`);
+    lines.push(`    joiner_screw_type = "${config.joinerScrewType || 'M5'}",`);
+    lines.push(`    joiner_nut_floor = ${config.joinerNutFloor ?? 0}`);
     lines.push(');');
   } else {
     const devicesCode = generateDevicesArray(config.devices);

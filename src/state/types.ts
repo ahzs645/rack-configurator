@@ -101,6 +101,7 @@ export interface PlacedDevice {
 // Full rack configuration
 export interface RackConfig {
   rackU: 1 | 2 | 3 | 4 | 5 | 6;
+  panelWidth: number; // Custom panel width in mm (default: 450.85 for 19" rack)
   earStyle: EarStyle;
   earPosition: EarPosition;
   earThickness: number;
@@ -133,6 +134,7 @@ export interface RackConfig {
   joinerNutSide: JoinerNutSide;
   joinerNutDepth: number;
   joinerScrewType: JoinerScrewType;
+  joinerNutFloor: number;  // Floor thickness for captive nut (0 = open pocket)
 
   // Placed devices (for single piece or when isSplit=false)
   devices: PlacedDevice[];
@@ -165,6 +167,7 @@ export function getRackHeight(rackU: number): number {
 // Default configuration
 export const DEFAULT_RACK_CONFIG: RackConfig = {
   rackU: 2,
+  panelWidth: RACK_CONSTANTS.PANEL_WIDTH, // 450.85mm (standard 19" rack)
   earStyle: 'toolless',
   earPosition: 'bottom',
   earThickness: 2.9,
@@ -187,6 +190,7 @@ export const DEFAULT_RACK_CONFIG: RackConfig = {
   joinerNutSide: 'right',
   joinerNutDepth: 4.5,
   joinerScrewType: 'M5',
+  joinerNutFloor: 0,  // Default open pocket (set > 0 for captive nut)
   devices: [],
   leftDevices: [],
   rightDevices: [],

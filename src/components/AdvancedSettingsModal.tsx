@@ -9,6 +9,7 @@ interface AdvancedSettingsModalProps {
 export function AdvancedSettingsModal({ onClose }: AdvancedSettingsModalProps) {
   const {
     config,
+    setPanelWidth,
     setPlateThickness,
     setCornerRadius,
     setClearance,
@@ -43,6 +44,28 @@ export function AdvancedSettingsModal({ onClose }: AdvancedSettingsModalProps) {
 
         {/* Content */}
         <div className="p-4 space-y-6">
+          {/* Panel Size */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-300 mb-3">Panel Size</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-400 mb-1">Panel Width (mm)</label>
+                <input
+                  type="number"
+                  value={config.panelWidth || 450.85}
+                  onChange={(e) => setPanelWidth(Number(e.target.value))}
+                  min={100}
+                  max={600}
+                  step={0.1}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Standard 19" rack: 450.85mm | Unifi Toolless: 440mm | Custom for other racks
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Plate Settings */}
           <div>
             <h3 className="text-sm font-medium text-gray-300 mb-3">Plate Settings</h3>

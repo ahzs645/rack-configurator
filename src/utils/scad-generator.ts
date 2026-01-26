@@ -46,6 +46,7 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
     lines.push('// Split rack faceplate');
     lines.push('rack_faceplate_split(');
     lines.push(`    rack_u = ${config.rackU},`);
+    lines.push(`    panel_width = ${config.panelWidth || 450.85},`);
     lines.push(`    left_devices = ${leftDevicesCode},`);
     lines.push(`    right_devices = ${rightDevicesCode},`);
     lines.push(`    split_x = ${config.splitPosition},`);
@@ -66,7 +67,8 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
     console.log('Generating SCAD with joinerNutSide:', config.joinerNutSide);
     lines.push(`    joiner_nut_side = "${config.joinerNutSide || 'right'}",`);
     lines.push(`    joiner_nut_depth = ${config.joinerNutDepth || 4.5},`);
-    lines.push(`    joiner_screw_type = "${config.joinerScrewType || 'M5'}"`);
+    lines.push(`    joiner_screw_type = "${config.joinerScrewType || 'M5'}",`);
+    lines.push(`    joiner_nut_floor = ${config.joinerNutFloor ?? 0}`);
     lines.push(');');
   } else {
     // Single piece mode
@@ -75,6 +77,7 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
     lines.push('// Single piece rack faceplate');
     lines.push('rack_faceplate(');
     lines.push(`    rack_u = ${config.rackU},`);
+    lines.push(`    panel_width = ${config.panelWidth || 450.85},`);
     lines.push(`    devices = ${devicesCode},`);
     lines.push(`    plate_thick = ${config.plateThickness},`);
     lines.push(`    corner_radius = ${config.cornerRadius},`);

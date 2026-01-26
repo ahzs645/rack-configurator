@@ -112,6 +112,7 @@ function _get_dev_back_style(device_entry) =
 
 module rack_faceplate(
     rack_u = 1,
+    panel_width = 0,  // 0 = use standard EIA_19_PANEL_WIDTH (450.85mm)
     devices = [],
     plate_thick = _RG_DEFAULT_PLATE_THICK,
     corner_radius = 0,
@@ -129,7 +130,7 @@ module rack_faceplate(
     show_labels = true
 ) {
     height = rack_height(rack_u);
-    width = EIA_19_PANEL_WIDTH;
+    width = panel_width > 0 ? panel_width : EIA_19_PANEL_WIDTH;
     center_x = width / 2;
     center_z = height / 2;
 
@@ -202,6 +203,7 @@ module rack_faceplate(
 
 module rack_faceplate_split(
     rack_u = 1,
+    panel_width = 0,  // 0 = use standard EIA_19_PANEL_WIDTH (450.85mm)
     left_devices = [],
     right_devices = [],
     split_x = 0,  // 0 = auto-calculate center
@@ -222,10 +224,11 @@ module rack_faceplate_split(
     render_part = "both",
     joiner_nut_side = "right",
     joiner_nut_depth = 4.5,
-    joiner_screw_type = "M5"
+    joiner_screw_type = "M5",
+    joiner_nut_floor = 0  // Captive nut floor thickness (0 = open pocket)
 ) {
     height = rack_height(rack_u);
-    total_width = EIA_19_PANEL_WIDTH;
+    total_width = panel_width > 0 ? panel_width : EIA_19_PANEL_WIDTH;
 
     // Convert split_x from center-offset to absolute position
     // split_x is relative to panel center: 0 = center, positive = right of center
@@ -247,7 +250,7 @@ module rack_faceplate_split(
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x,  // Pass full panel center
-                joiner_nut_side, joiner_nut_depth, joiner_screw_type
+                joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
             );
         } else {
             color("SteelBlue")
@@ -257,7 +260,7 @@ module rack_faceplate_split(
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x,  // Pass full panel center
-                joiner_nut_side, joiner_nut_depth, joiner_screw_type
+                joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
             );
         }
     }
@@ -275,7 +278,7 @@ module rack_faceplate_split(
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x, left_width,  // Pass full center and offset
-                joiner_nut_side, joiner_nut_depth, joiner_screw_type
+                joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
             );
         } else {
             color("Coral")
@@ -285,7 +288,7 @@ module rack_faceplate_split(
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x, left_width,  // Pass full center and offset
-                joiner_nut_side, joiner_nut_depth, joiner_screw_type
+                joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
             );
         }
     }
@@ -634,7 +637,8 @@ module _rg_split_half_left(
     full_center_x = undef,  // Full panel center for device positioning
     joiner_nut_side = "right",
     joiner_nut_depth = 4.5,
-    joiner_screw_type = "M5"
+    joiner_screw_type = "M5",
+    joiner_nut_floor = 0
 ) {
     // Use full panel center if provided, otherwise use half center (backwards compat)
     center_x = full_center_x != undef ? full_center_x : width / 2;
@@ -656,7 +660,7 @@ module _rg_split_half_left(
             // Joiner wall
             translate([width, 0, height/2])
             rotate([-90, 0, 0])
-            joiner_wall_addon(unit_height = rack_u, side = "left", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth, screw_type = joiner_screw_type);
+            joiner_wall_addon(unit_height = rack_u, side = "left", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth, screw_type = joiner_screw_type, nut_floor = joiner_nut_floor);
 
             // Device mounts
             for (i = [0 : len(devices) - 1]) {
@@ -691,7 +695,8 @@ module _rg_split_half_right(
     left_width = 0,  // Width of left half (offset from full panel origin)
     joiner_nut_side = "right",
     joiner_nut_depth = 4.5,
-    joiner_screw_type = "M5"
+    joiner_screw_type = "M5",
+    joiner_nut_floor = 0
 ) {
     // For right half, center_x is relative to the right half's origin
     // Full panel center from right half's perspective = full_center_x - left_width
@@ -714,7 +719,7 @@ module _rg_split_half_right(
             // Joiner wall
             translate([0, 0, height/2])
             rotate([-90, 0, 0])
-            joiner_wall_addon(unit_height = rack_u, side = "right", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth, screw_type = joiner_screw_type);
+            joiner_wall_addon(unit_height = rack_u, side = "right", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth, screw_type = joiner_screw_type, nut_floor = joiner_nut_floor);
 
             // Device mounts
             for (i = [0 : len(devices) - 1]) {

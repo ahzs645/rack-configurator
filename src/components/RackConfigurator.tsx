@@ -239,6 +239,7 @@ export function RackConfigurator() {
     svgWidth: svgSize.width,
     svgHeight: svgSize.height,
     rackU: config.rackU,
+    panelWidth: config.panelWidth,
     zoom,
     panX,
     panY,
@@ -247,7 +248,7 @@ export function RackConfigurator() {
 
   // Get rack bounds in SVG coords
   const rackBounds = getRackBoundsSvg(view);
-  const rack = getRackDimensions(config.rackU);
+  const rack = getRackDimensions(config.rackU, config.panelWidth);
 
   // Calculate pan limits based on rack size and viewport
   const getPanLimits = useCallback(() => {

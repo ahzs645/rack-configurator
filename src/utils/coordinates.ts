@@ -18,6 +18,7 @@ export interface ViewConfig {
   svgWidth: number;
   svgHeight: number;
   rackU: number;
+  panelWidth?: number; // Custom panel width in mm (default: RACK_CONSTANTS.PANEL_WIDTH)
   zoom: number;
   panX: number;
   panY: number;
@@ -27,9 +28,9 @@ export interface ViewConfig {
 /**
  * Get the rack panel dimensions in mm
  */
-export function getRackDimensions(rackU: number): { width: number; height: number } {
+export function getRackDimensions(rackU: number, customWidth?: number): { width: number; height: number } {
   return {
-    width: RACK_CONSTANTS.PANEL_WIDTH,
+    width: customWidth ?? RACK_CONSTANTS.PANEL_WIDTH,
     height: getRackHeight(rackU),
   };
 }
@@ -41,9 +42,10 @@ export function calculateFitScale(
   svgWidth: number,
   svgHeight: number,
   rackU: number,
-  padding: number
+  padding: number,
+  panelWidth?: number
 ): number {
-  const rack = getRackDimensions(rackU);
+  const rack = getRackDimensions(rackU, panelWidth);
   const availableWidth = svgWidth - padding * 2;
   const availableHeight = svgHeight - padding * 2;
 
@@ -61,7 +63,7 @@ export function rackToSvg(
   rackY: number,
   view: ViewConfig
 ): { x: number; y: number } {
-  const baseScale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding);
+  const baseScale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding, view.panelWidth);
   const scale = baseScale * view.zoom;
 
   // Center of the SVG viewport
@@ -84,7 +86,7 @@ export function svgToRack(
   svgY: number,
   view: ViewConfig
 ): { x: number; y: number } {
-  const baseScale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding);
+  const baseScale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding, view.panelWidth);
   const scale = baseScale * view.zoom;
 
   // Center of the SVG viewport
@@ -102,7 +104,7 @@ export function svgToRack(
  * Convert a size in rack mm to SVG pixels
  */
 export function rackSizeToSvg(sizeMm: number, view: ViewConfig): number {
-  const baseScale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding);
+  const baseScale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding, view.panelWidth);
   return sizeMm * baseScale * view.zoom;
 }
 
@@ -110,7 +112,7 @@ export function rackSizeToSvg(sizeMm: number, view: ViewConfig): number {
  * Convert a size in SVG pixels to rack mm
  */
 export function svgSizeToRack(sizePx: number, view: ViewConfig): number {
-  const baseScale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding);
+  const baseScale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding, view.panelWidth);
   return sizePx / (baseScale * view.zoom);
 }
 
@@ -123,7 +125,7 @@ export function getRackBoundsSvg(view: ViewConfig): {
   width: number;
   height: number;
 } {
-  const rack = getRackDimensions(view.rackU);
+  const rack = getRackDimensions(view.rackU, view.panelWidth);
 
   // Top-left corner (in rack coords: -width/2, +height/2)
   const topLeft = rackToSvg(-rack.width / 2, rack.height / 2, view);

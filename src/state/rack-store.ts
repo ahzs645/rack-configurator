@@ -33,6 +33,7 @@ interface RackStore {
 
   // Actions - Rack settings
   setRackU: (rackU: RackConfig['rackU']) => void;
+  setPanelWidth: (width: number) => void;
   setEarStyle: (style: EarStyle) => void;
   setEarPosition: (position: EarPosition) => void;
   setEarThickness: (thickness: number) => void;
@@ -57,6 +58,7 @@ interface RackStore {
   setJoinerNutSide: (side: JoinerNutSide) => void;
   setJoinerNutDepth: (depth: number) => void;
   setJoinerScrewType: (screwType: JoinerScrewType) => void;
+  setJoinerNutFloor: (floor: number) => void;
 
   // Actions - Device management
   addDevice: (deviceId: string, offsetX?: number, offsetY?: number, mountType?: MountType, side?: 'left' | 'right') => string;
@@ -111,6 +113,11 @@ export const useRackStore = create<RackStore>((set, get) => ({
   setRackU: (rackU) =>
     set((state) => ({
       config: { ...state.config, rackU },
+    })),
+
+  setPanelWidth: (panelWidth) =>
+    set((state) => ({
+      config: { ...state.config, panelWidth },
     })),
 
   setEarStyle: (earStyle) =>
@@ -279,6 +286,11 @@ export const useRackStore = create<RackStore>((set, get) => ({
   setJoinerScrewType: (joinerScrewType) =>
     set((state) => ({
       config: { ...state.config, joinerScrewType },
+    })),
+
+  setJoinerNutFloor: (joinerNutFloor) =>
+    set((state) => ({
+      config: { ...state.config, joinerNutFloor },
     })),
 
   // Device management

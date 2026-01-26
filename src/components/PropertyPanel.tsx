@@ -72,6 +72,7 @@ export function PropertyPanel() {
     setJoinerNutSide,
     setJoinerNutDepth,
     setJoinerScrewType,
+    setJoinerNutFloor,
   } = useRackStore();
 
   // Get all placed devices with their side info
@@ -235,7 +236,7 @@ export function PropertyPanel() {
           </div>
 
           {/* Nut Pocket Depth */}
-          <div>
+          <div className="mb-3">
             <label className="block text-xs text-gray-400 mb-1">Nut Pocket Depth</label>
             <div className="flex items-center gap-2">
               <input
@@ -250,7 +251,27 @@ export function PropertyPanel() {
               <span className="text-xs text-gray-400">mm</span>
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Depth for the captive nut pocket. Set to 0 to use the default for the selected bolt size.
+              Depth for the nut pocket. Set to 0 to use the default for the selected bolt size.
+            </div>
+          </div>
+
+          {/* Captive Nut Floor */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Captive Nut Floor</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={config.joinerNutFloor ?? 0}
+                onChange={(e) => setJoinerNutFloor(Number(e.target.value))}
+                step={0.1}
+                min={0}
+                max={2}
+                className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+              />
+              <span className="text-xs text-gray-400">mm</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Thin floor covering the nut pocket (captive nut). Set to 0 for an open pocket.
             </div>
           </div>
         </div>
