@@ -131,8 +131,10 @@ module joiner_wall(
 
 
 /**
- * Creates the LEFT side joiner (with screw clearance holes)
- * Thin wall at joint edge, screws go through from left to right
+ * Creates the LEFT side joiner
+ * Thin wall at joint edge
+ * @param nut_side - "left" for nut pockets on this side, "right" for clearance holes only
+ * @param nut_pocket_depth - depth of the hex nut pocket (default: M5_HEX_NUT_POCKET_DEPTH)
  */
 module faceplate_joiner_left(
     unit_height = 1,
@@ -142,10 +144,13 @@ module faceplate_joiner_left(
     wall_height = _WALL_HEIGHT,
     rounding = _WALL_ROUNDING,
     include_faceplate = true,
+    nut_side = "right",
+    nut_pocket_depth = M5_HEX_NUT_POCKET_DEPTH,
     fn = 32
 ) {
     panel_height = unit_height * _EIA_PANEL_HEIGHT;
     screw_positions = get_triangle_screw_positions(unit_height);
+    has_nut = (nut_side == "left");
 
     difference() {
         union() {
@@ -166,23 +171,35 @@ module faceplate_joiner_left(
                 );
         }
 
-        // Screw clearance holes (horizontal, through the wall)
+        // Screw holes (and nut pockets if nut_side == "left")
         for (pos = screw_positions) {
             y_pos = pos[0];
             z_height = pos[1];
             screw_z = faceplate_thickness + z_height;
 
+            // Through hole
             translate([-wall_thickness/2, y_pos, screw_z])
                 rotate([0, 90, 0])
                     cylinder(h = wall_thickness + 2, d = M5_CLEARANCE_HOLE, center = true, $fn = fn);
+
+            // Hex nut pocket on outer face (if this side has nuts)
+            if (has_nut) {
+                translate([-wall_thickness - 0.1, y_pos, screw_z])
+                    rotate([0, 90, 0])
+                        rotate([0, 0, 30])
+                            linear_extrude(height = nut_pocket_depth + 0.5)
+                                hexagon_2d(M5_HEX_NUT_POCKET_AF);
+            }
         }
     }
 }
 
 
 /**
- * Creates the RIGHT side joiner (with hex nut pockets)
- * Thin wall at joint edge, hex nuts recessed on outer face
+ * Creates the RIGHT side joiner
+ * Thin wall at joint edge
+ * @param nut_side - "right" for nut pockets on this side, "left" for clearance holes only
+ * @param nut_pocket_depth - depth of the hex nut pocket (default: M5_HEX_NUT_POCKET_DEPTH)
  */
 module faceplate_joiner_right(
     unit_height = 1,
@@ -192,10 +209,13 @@ module faceplate_joiner_right(
     wall_height = _WALL_HEIGHT,
     rounding = _WALL_ROUNDING,
     include_faceplate = true,
+    nut_side = "right",
+    nut_pocket_depth = M5_HEX_NUT_POCKET_DEPTH,
     fn = 32
 ) {
     panel_height = unit_height * _EIA_PANEL_HEIGHT;
     screw_positions = get_triangle_screw_positions(unit_height);
+    has_nut = (nut_side == "right");
 
     difference() {
         union() {
@@ -216,7 +236,7 @@ module faceplate_joiner_right(
                 );
         }
 
-        // Screw holes and hex nut pockets
+        // Screw holes (and nut pockets if nut_side == "right")
         for (pos = screw_positions) {
             y_pos = pos[0];
             z_height = pos[1];
@@ -227,12 +247,14 @@ module faceplate_joiner_right(
                 rotate([0, 90, 0])
                     cylinder(h = wall_thickness + 2, d = M5_CLEARANCE_HOLE, center = true, $fn = fn);
 
-            // Hex nut pocket on outer face
-            translate([wall_thickness - M5_HEX_NUT_POCKET_DEPTH + 0.1, y_pos, screw_z])
-                rotate([0, 90, 0])
-                    rotate([0, 0, 30])
-                        linear_extrude(height = M5_HEX_NUT_POCKET_DEPTH + 0.5)
-                            hexagon_2d(M5_HEX_NUT_POCKET_AF);
+            // Hex nut pocket on outer face (if this side has nuts)
+            if (has_nut) {
+                translate([wall_thickness - nut_pocket_depth + 0.1, y_pos, screw_z])
+                    rotate([0, 90, 0])
+                        rotate([0, 0, 30])
+                            linear_extrude(height = nut_pocket_depth + 0.5)
+                                hexagon_2d(M5_HEX_NUT_POCKET_AF);
+            }
         }
     }
 }
@@ -240,11 +262,15 @@ module faceplate_joiner_right(
 
 /**
  * Creates both joiners side by side for printing
+ * @param nut_side - "left" or "right" to specify which side has the nut pockets
+ * @param nut_pocket_depth - depth of the hex nut pocket
  */
 module faceplate_joiner_pair(
     unit_height = 1,
     faceplate_width = 60,
     spacing = 20,
+    nut_side = "right",
+    nut_pocket_depth = M5_HEX_NUT_POCKET_DEPTH,
     fn = 32
 ) {
     // Left side
@@ -254,6 +280,8 @@ module faceplate_joiner_pair(
                 unit_height = unit_height,
                 faceplate_width = faceplate_width,
                 include_faceplate = true,
+                nut_side = nut_side,
+                nut_pocket_depth = nut_pocket_depth,
                 fn = fn
             );
 
@@ -264,6 +292,8 @@ module faceplate_joiner_pair(
                 unit_height = unit_height,
                 faceplate_width = faceplate_width,
                 include_faceplate = true,
+                nut_side = nut_side,
+                nut_pocket_depth = nut_pocket_depth,
                 fn = fn
             );
 }
@@ -271,11 +301,15 @@ module faceplate_joiner_pair(
 
 /**
  * Creates an assembled view - walls touching face-to-face
+ * @param nut_side - "left" or "right" to specify which side has the nut pockets
+ * @param nut_pocket_depth - depth of the hex nut pocket
  */
 module faceplate_joiner_assembled(
     unit_height = 1,
     faceplate_width = 60,
     explode = 0,
+    nut_side = "right",
+    nut_pocket_depth = M5_HEX_NUT_POCKET_DEPTH,
     fn = 32
 ) {
     // Left side
@@ -285,6 +319,8 @@ module faceplate_joiner_assembled(
                 unit_height = unit_height,
                 faceplate_width = faceplate_width,
                 include_faceplate = true,
+                nut_side = nut_side,
+                nut_pocket_depth = nut_pocket_depth,
                 fn = fn
             );
 
@@ -295,6 +331,8 @@ module faceplate_joiner_assembled(
                 unit_height = unit_height,
                 faceplate_width = faceplate_width,
                 include_faceplate = true,
+                nut_side = nut_side,
+                nut_pocket_depth = nut_pocket_depth,
                 fn = fn
             );
 }
@@ -302,16 +340,33 @@ module faceplate_joiner_assembled(
 
 /**
  * Just the wall portion for adding to existing faceplates
+ * @param side - "left" or "right" to specify which side wall to create
+ * @param nut_side - "left" or "right" to specify which side has the nut pockets
+ * @param nut_pocket_depth - depth of the hex nut pocket
  */
 module joiner_wall_addon(
     unit_height = 1,
     side = "left",
+    nut_side = "right",
+    nut_pocket_depth = M5_HEX_NUT_POCKET_DEPTH,
     fn = 32
 ) {
     if (side == "left") {
-        faceplate_joiner_left(unit_height = unit_height, include_faceplate = false, fn = fn);
+        faceplate_joiner_left(
+            unit_height = unit_height,
+            include_faceplate = false,
+            nut_side = nut_side,
+            nut_pocket_depth = nut_pocket_depth,
+            fn = fn
+        );
     } else {
-        faceplate_joiner_right(unit_height = unit_height, include_faceplate = false, fn = fn);
+        faceplate_joiner_right(
+            unit_height = unit_height,
+            include_faceplate = false,
+            nut_side = nut_side,
+            nut_pocket_depth = nut_pocket_depth,
+            fn = fn
+        );
     }
 }
 

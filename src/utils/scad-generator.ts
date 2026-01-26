@@ -62,7 +62,9 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
     lines.push(`    cutout_radius = ${config.cutoutRadius},`);
     lines.push(`    show_preview = ${showPreview},`);
     lines.push(`    show_labels = ${showLabels},`);
-    lines.push(`    render_part = "${config.renderMode}"`);
+    lines.push(`    render_part = "${config.renderMode}",`);
+    lines.push(`    joiner_nut_side = "${config.joinerNutSide || 'right'}",`);
+    lines.push(`    joiner_nut_depth = ${config.joinerNutDepth || 4.5}`);
     lines.push(');');
   } else {
     // Single piece mode

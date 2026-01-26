@@ -60,6 +60,14 @@ export const RENDER_MODE_LABELS: Record<RenderMode, string> = {
   right_print: 'Split - Right (Print)',
 };
 
+// Joiner nut side options
+export type JoinerNutSide = 'left' | 'right';
+
+export const JOINER_NUT_SIDE_LABELS: Record<JoinerNutSide, string> = {
+  left: 'Left Side',
+  right: 'Right Side',
+};
+
 // Placed device on the rack
 export interface PlacedDevice {
   id: string;          // Unique instance ID
@@ -105,6 +113,10 @@ export interface RackConfig {
   splitPosition: number;  // 0 = auto center
   splitLocked: boolean;   // Lock split line from being dragged
   renderMode: RenderMode;
+
+  // Joiner settings (for split panels)
+  joinerNutSide: JoinerNutSide;
+  joinerNutDepth: number;
 
   // Placed devices (for single piece or when isSplit=false)
   devices: PlacedDevice[];
@@ -156,6 +168,8 @@ export const DEFAULT_RACK_CONFIG: RackConfig = {
   splitPosition: 0,  // 0 = auto
   splitLocked: false,
   renderMode: 'single',
+  joinerNutSide: 'right',
+  joinerNutDepth: 4.5,
   devices: [],
   leftDevices: [],
   rightDevices: [],

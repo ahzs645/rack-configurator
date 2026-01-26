@@ -8,6 +8,7 @@ import type {
   BackStyle,
   VentType,
   RenderMode,
+  JoinerNutSide,
 } from './types';
 import { DEFAULT_RACK_CONFIG } from './types';
 
@@ -52,6 +53,8 @@ interface RackStore {
   setSplitPosition: (position: number) => void;
   setSplitLocked: (locked: boolean) => void;
   setRenderMode: (mode: RenderMode) => void;
+  setJoinerNutSide: (side: JoinerNutSide) => void;
+  setJoinerNutDepth: (depth: number) => void;
 
   // Actions - Device management
   addDevice: (deviceId: string, offsetX?: number, offsetY?: number, mountType?: MountType, side?: 'left' | 'right') => string;
@@ -252,6 +255,16 @@ export const useRackStore = create<RackStore>((set, get) => ({
   setRenderMode: (renderMode) =>
     set((state) => ({
       config: { ...state.config, renderMode },
+    })),
+
+  setJoinerNutSide: (joinerNutSide) =>
+    set((state) => ({
+      config: { ...state.config, joinerNutSide },
+    })),
+
+  setJoinerNutDepth: (joinerNutDepth) =>
+    set((state) => ({
+      config: { ...state.config, joinerNutDepth },
     })),
 
   // Device management

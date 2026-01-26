@@ -219,7 +219,9 @@ module rack_faceplate_split(
     cutout_radius = 5,
     show_preview = true,
     show_labels = true,
-    render_part = "both"
+    render_part = "both",
+    joiner_nut_side = "right",
+    joiner_nut_depth = 4.5
 ) {
     height = rack_height(rack_u);
     total_width = EIA_19_PANEL_WIDTH;
@@ -243,7 +245,8 @@ module rack_faceplate_split(
                 plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
-                full_center_x  // Pass full panel center
+                full_center_x,  // Pass full panel center
+                joiner_nut_side, joiner_nut_depth
             );
         } else {
             color("SteelBlue")
@@ -252,7 +255,8 @@ module rack_faceplate_split(
                 plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
-                full_center_x  // Pass full panel center
+                full_center_x,  // Pass full panel center
+                joiner_nut_side, joiner_nut_depth
             );
         }
     }
@@ -269,7 +273,8 @@ module rack_faceplate_split(
                 plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
-                full_center_x, left_width  // Pass full center and offset
+                full_center_x, left_width,  // Pass full center and offset
+                joiner_nut_side, joiner_nut_depth
             );
         } else {
             color("Coral")
@@ -278,7 +283,8 @@ module rack_faceplate_split(
                 plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
-                full_center_x, left_width  // Pass full center and offset
+                full_center_x, left_width,  // Pass full center and offset
+                joiner_nut_side, joiner_nut_depth
             );
         }
     }
@@ -624,7 +630,9 @@ module _rg_split_half_left(
     plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
     clearance, hex_dia, hex_wall, heavy, back_style,
     cutout_edge, cutout_radius, show_preview, show_labels,
-    full_center_x = undef  // Full panel center for device positioning
+    full_center_x = undef,  // Full panel center for device positioning
+    joiner_nut_side = "right",
+    joiner_nut_depth = 4.5
 ) {
     // Use full panel center if provided, otherwise use half center (backwards compat)
     center_x = full_center_x != undef ? full_center_x : width / 2;
@@ -646,7 +654,7 @@ module _rg_split_half_left(
             // Joiner wall
             translate([width, 0, height/2])
             rotate([-90, 0, 0])
-            joiner_wall_addon(unit_height = rack_u, side = "left");
+            joiner_wall_addon(unit_height = rack_u, side = "left", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth);
 
             // Device mounts
             for (i = [0 : len(devices) - 1]) {
@@ -678,7 +686,9 @@ module _rg_split_half_right(
     clearance, hex_dia, hex_wall, heavy, back_style,
     cutout_edge, cutout_radius, show_preview, show_labels,
     full_center_x = undef,  // Full panel center
-    left_width = 0  // Width of left half (offset from full panel origin)
+    left_width = 0,  // Width of left half (offset from full panel origin)
+    joiner_nut_side = "right",
+    joiner_nut_depth = 4.5
 ) {
     // For right half, center_x is relative to the right half's origin
     // Full panel center from right half's perspective = full_center_x - left_width
@@ -701,7 +711,7 @@ module _rg_split_half_right(
             // Joiner wall
             translate([0, 0, height/2])
             rotate([-90, 0, 0])
-            joiner_wall_addon(unit_height = rack_u, side = "right");
+            joiner_wall_addon(unit_height = rack_u, side = "right", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth);
 
             // Device mounts
             for (i = [0 : len(devices) - 1]) {

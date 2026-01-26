@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import { useRackStore } from '../state/rack-store';
 import type { RackConfig } from '../state/types';
-import type { EarStyle, EarPosition } from '../state/types';
-import { EAR_STYLE_LABELS } from '../state/types';
+import type { EarStyle, EarPosition, JoinerNutSide } from '../state/types';
+import { EAR_STYLE_LABELS, JOINER_NUT_SIDE_LABELS } from '../state/types';
 import { downloadScadFile, downloadConfigJson, generateScadCode, generateScadCodeForSide, downloadStl, downloadSplitStlZip } from '../utils/scad-generator';
 import { downloadBundledScadFile } from '../utils/scad-bundler';
 import { AdvancedSettingsModal } from './AdvancedSettingsModal';
@@ -30,6 +30,8 @@ export function RackToolbar() {
     setIsSplit,
     setSplitPosition,
     setSplitLocked,
+    setJoinerNutSide,
+    setJoinerNutDepth,
     toggleShowGrid,
     toggleSnapToGrid,
     setGridSize,
@@ -364,6 +366,36 @@ export function RackToolbar() {
               </svg>
             )}
           </button>
+
+          {/* Joiner Nut Side */}
+          <div className="w-px h-4 bg-gray-600" />
+          <label className="text-xs text-gray-400">Nut:</label>
+          <select
+            value={config.joinerNutSide || 'right'}
+            onChange={(e) => setJoinerNutSide(e.target.value as JoinerNutSide)}
+            className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+            title="Which side has the nut pocket"
+          >
+            {Object.entries(JOINER_NUT_SIDE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+
+          {/* Joiner Nut Depth */}
+          <label className="text-xs text-gray-400">Depth:</label>
+          <input
+            type="number"
+            value={config.joinerNutDepth || 4.5}
+            onChange={(e) => setJoinerNutDepth(Number(e.target.value))}
+            step="0.5"
+            min="2"
+            max="10"
+            className="w-14 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+            title="Nut pocket depth (mm)"
+          />
+          <span className="text-xs text-gray-500">mm</span>
         </div>
       )}
 
