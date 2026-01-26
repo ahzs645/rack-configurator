@@ -222,6 +222,7 @@ module rack_faceplate_split(
     show_preview = true,
     show_labels = true,
     render_part = "both",
+    joiner_type = "screw",  // "screw" or "dovetail"
     joiner_nut_side = "right",
     joiner_nut_depth = 4.5,
     joiner_screw_type = "M5",
@@ -250,7 +251,7 @@ module rack_faceplate_split(
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x,  // Pass full panel center
-                joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
+                joiner_type, joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
             );
         } else {
             color("SteelBlue")
@@ -260,7 +261,7 @@ module rack_faceplate_split(
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x,  // Pass full panel center
-                joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
+                joiner_type, joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
             );
         }
     }
@@ -278,7 +279,7 @@ module rack_faceplate_split(
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x, left_width,  // Pass full center and offset
-                joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
+                joiner_type, joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
             );
         } else {
             color("Coral")
@@ -288,7 +289,7 @@ module rack_faceplate_split(
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x, left_width,  // Pass full center and offset
-                joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
+                joiner_type, joiner_nut_side, joiner_nut_depth, joiner_screw_type, joiner_nut_floor
             );
         }
     }
@@ -635,6 +636,7 @@ module _rg_split_half_left(
     clearance, hex_dia, hex_wall, heavy, back_style,
     cutout_edge, cutout_radius, show_preview, show_labels,
     full_center_x = undef,  // Full panel center for device positioning
+    joiner_type = "screw",  // "screw" or "dovetail"
     joiner_nut_side = "right",
     joiner_nut_depth = 4.5,
     joiner_screw_type = "M5",
@@ -657,10 +659,14 @@ module _rg_split_half_left(
                 );
             }
 
-            // Joiner wall
+            // Joiner wall - screw or dovetail based on joiner_type
             translate([width, 0, height/2])
             rotate([-90, 0, 0])
-            joiner_wall_addon(unit_height = rack_u, side = "left", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth, screw_type = joiner_screw_type, nut_floor = joiner_nut_floor);
+            if (joiner_type == "dovetail") {
+                dovetail_wall_addon(unit_height = rack_u, side = "left");
+            } else {
+                joiner_wall_addon(unit_height = rack_u, side = "left", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth, screw_type = joiner_screw_type, nut_floor = joiner_nut_floor);
+            }
 
             // Device mounts
             for (i = [0 : len(devices) - 1]) {
@@ -693,6 +699,7 @@ module _rg_split_half_right(
     cutout_edge, cutout_radius, show_preview, show_labels,
     full_center_x = undef,  // Full panel center
     left_width = 0,  // Width of left half (offset from full panel origin)
+    joiner_type = "screw",  // "screw" or "dovetail"
     joiner_nut_side = "right",
     joiner_nut_depth = 4.5,
     joiner_screw_type = "M5",
@@ -716,10 +723,14 @@ module _rg_split_half_right(
                 );
             }
 
-            // Joiner wall
+            // Joiner wall - screw or dovetail based on joiner_type
             translate([0, 0, height/2])
             rotate([-90, 0, 0])
-            joiner_wall_addon(unit_height = rack_u, side = "right", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth, screw_type = joiner_screw_type, nut_floor = joiner_nut_floor);
+            if (joiner_type == "dovetail") {
+                dovetail_wall_addon(unit_height = rack_u, side = "right");
+            } else {
+                joiner_wall_addon(unit_height = rack_u, side = "right", nut_side = joiner_nut_side, nut_pocket_depth = joiner_nut_depth, screw_type = joiner_screw_type, nut_floor = joiner_nut_floor);
+            }
 
             // Device mounts
             for (i = [0 : len(devices) - 1]) {

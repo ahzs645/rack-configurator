@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRackStore } from '../state/rack-store';
-import type { MountType, PlacedDevice, BackStyle, JoinerScrewType } from '../state/types';
-import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_SCREW_TYPE_LABELS } from '../state/types';
+import type { MountType, PlacedDevice, BackStyle, JoinerScrewType, JoinerType } from '../state/types';
+import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_SCREW_TYPE_LABELS, JOINER_TYPE_LABELS } from '../state/types';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 
 // Placed device list item
@@ -69,6 +69,7 @@ export function PropertyPanel() {
     updateDeviceDimensions,
     removeDevice,
     moveDeviceToSide,
+    setJoinerType,
     setJoinerNutSide,
     setJoinerNutDepth,
     setJoinerScrewType,
@@ -153,7 +154,9 @@ export function PropertyPanel() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-white font-medium">Split Joiner</div>
                     <div className="text-xs text-gray-400">
-                      {config.joinerScrewType || 'M5'} bolt joint • Nut on {config.joinerNutSide || 'right'}
+                      {config.joinerType === 'dovetail'
+                        ? 'Dovetail (tool-free)'
+                        : `${config.joinerScrewType || 'M5'} bolt joint • Nut on ${config.joinerNutSide || 'right'}`}
                     </div>
                   </div>
                 </div>
@@ -185,10 +188,29 @@ export function PropertyPanel() {
           <div className="mb-3">
             <div className="text-white font-medium text-sm">Split Panel Joiner</div>
             <div className="text-gray-500 text-xs">
-              Hex bolt with captive nut pocket
+              {config.joinerType === 'dovetail' ? 'Tool-free sliding dovetail joint' : 'Hex bolt with captive nut pocket'}
             </div>
           </div>
 
+          {/* Joiner Type */}
+          <div className="mb-3">
+            <label className="block text-xs text-gray-400 mb-1">Joiner Type</label>
+            <select
+              value={config.joinerType || 'screw'}
+              onChange={(e) => setJoinerType(e.target.value as JoinerType)}
+              className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+            >
+              {Object.entries(JOINER_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Screw-specific options (only show for screw type) */}
+          {config.joinerType !== 'dovetail' && (
+          <>
           {/* Screw Type */}
           <div className="mb-3">
             <label className="block text-xs text-gray-400 mb-1">Bolt Size</label>
@@ -274,6 +296,8 @@ export function PropertyPanel() {
               Thin floor covering the nut pocket (captive nut). Set to 0 for an open pocket.
             </div>
           </div>
+          </>
+          )}
         </div>
       )}
 

@@ -491,6 +491,194 @@ module joiner_wall_addon(
 
 
 // ============================================================================
+// DOVETAIL JOINER MODULES
+// ============================================================================
+
+// Dovetail dimensions
+_DOVETAIL_WIDTH_TOP = 6;       // Narrow end of dovetail
+_DOVETAIL_WIDTH_BOTTOM = 10;   // Wide end of dovetail
+_DOVETAIL_HEIGHT = 4;          // How far dovetail projects from wall
+_DOVETAIL_SLACK = 0.3;         // Clearance for fit
+
+/**
+ * 2D dovetail profile (trapezoid)
+ */
+module dovetail_profile_2d(top_w, bottom_w, height) {
+    polygon([
+        [-bottom_w/2, 0],
+        [-top_w/2, height],
+        [top_w/2, height],
+        [bottom_w/2, 0]
+    ]);
+}
+
+/**
+ * Creates a male dovetail (the protruding part)
+ */
+module dovetail_male(
+    length = 15,
+    top_w = _DOVETAIL_WIDTH_TOP,
+    bottom_w = _DOVETAIL_WIDTH_BOTTOM,
+    height = _DOVETAIL_HEIGHT,
+    taper = 0.5  // Entry taper length
+) {
+    // Main body
+    translate([0, taper, 0])
+    linear_extrude(length - taper)
+        dovetail_profile_2d(top_w, bottom_w, height);
+
+    // Tapered entry
+    if (taper > 0) {
+        linear_extrude(taper, scale=[1, 0.5])
+            dovetail_profile_2d(top_w, bottom_w, height);
+    }
+}
+
+/**
+ * Creates a female dovetail socket (the cutout)
+ */
+module dovetail_female(
+    length = 15,
+    top_w = _DOVETAIL_WIDTH_TOP,
+    bottom_w = _DOVETAIL_WIDTH_BOTTOM,
+    height = _DOVETAIL_HEIGHT,
+    slack = _DOVETAIL_SLACK,
+    taper = 0.5
+) {
+    // Add slack for clearance
+    dovetail_male(
+        length = length + slack,
+        top_w = top_w + slack,
+        bottom_w = bottom_w + slack,
+        height = height + slack,
+        taper = taper
+    );
+}
+
+/**
+ * Creates dovetail joiner wall for LEFT side (male dovetails)
+ * Dovetails project from the joint face, slide together in Y direction
+ */
+module dovetail_joiner_left(
+    unit_height = 1,
+    faceplate_thickness = _FACEPLATE_THICKNESS,
+    wall_thickness = _WALL_THICKNESS,
+    wall_height = _WALL_HEIGHT,
+    dovetail_count = 0,  // 0 = auto based on unit_height
+    include_faceplate = false,
+    fn = 32
+) {
+    panel_height = unit_height * _EIA_PANEL_HEIGHT;
+
+    // Calculate dovetail count and spacing
+    actual_count = (dovetail_count > 0) ? dovetail_count : max(2, unit_height * 2);
+    spacing = panel_height / (actual_count + 1);
+
+    // Dovetail dimensions
+    dt_length = wall_height - 2;  // Slightly shorter than wall height
+    dt_top = _DOVETAIL_WIDTH_TOP;
+    dt_bottom = _DOVETAIL_WIDTH_BOTTOM;
+    dt_height = min(_DOVETAIL_HEIGHT, wall_thickness - 1);  // Don't exceed wall
+
+    union() {
+        // Base wall
+        translate([-wall_thickness, -panel_height/2, faceplate_thickness])
+        cube([wall_thickness, panel_height, wall_height]);
+
+        // Male dovetails on the joint face
+        for (i = [1:actual_count]) {
+            y_pos = -panel_height/2 + i * spacing;
+
+            // Dovetail projecting from x=0 toward positive X (into mating part)
+            translate([0, y_pos, faceplate_thickness + wall_height/2])
+            rotate([0, 90, 0])
+            rotate([0, 0, 90])
+            dovetail_male(
+                length = dt_length,
+                top_w = dt_top,
+                bottom_w = dt_bottom,
+                height = dt_height
+            );
+        }
+    }
+}
+
+/**
+ * Creates dovetail joiner wall for RIGHT side (female dovetail sockets)
+ */
+module dovetail_joiner_right(
+    unit_height = 1,
+    faceplate_thickness = _FACEPLATE_THICKNESS,
+    wall_thickness = _WALL_THICKNESS,
+    wall_height = _WALL_HEIGHT,
+    dovetail_count = 0,
+    include_faceplate = false,
+    fn = 32
+) {
+    panel_height = unit_height * _EIA_PANEL_HEIGHT;
+
+    // Calculate dovetail count and spacing (must match left side)
+    actual_count = (dovetail_count > 0) ? dovetail_count : max(2, unit_height * 2);
+    spacing = panel_height / (actual_count + 1);
+
+    // Dovetail dimensions (with slack for socket)
+    dt_length = wall_height - 2;
+    dt_top = _DOVETAIL_WIDTH_TOP;
+    dt_bottom = _DOVETAIL_WIDTH_BOTTOM;
+    dt_height = min(_DOVETAIL_HEIGHT, wall_thickness - 1) + _DOVETAIL_SLACK;
+
+    difference() {
+        // Base wall
+        translate([0, -panel_height/2, faceplate_thickness])
+        cube([wall_thickness, panel_height, wall_height]);
+
+        // Female dovetail sockets (cutouts)
+        for (i = [1:actual_count]) {
+            y_pos = -panel_height/2 + i * spacing;
+
+            // Socket cut into the wall from x=0
+            translate([0, y_pos, faceplate_thickness + wall_height/2])
+            rotate([0, 90, 0])
+            rotate([0, 0, 90])
+            dovetail_female(
+                length = dt_length + 1,  // Extra depth for full cut
+                top_w = dt_top,
+                bottom_w = dt_bottom,
+                height = dt_height
+            );
+        }
+    }
+}
+
+/**
+ * Dovetail wall addon for existing faceplates
+ * @param side - "left" for male dovetails, "right" for female sockets
+ */
+module dovetail_wall_addon(
+    unit_height = 1,
+    side = "left",
+    dovetail_count = 0,
+    fn = 32
+) {
+    if (side == "left") {
+        dovetail_joiner_left(
+            unit_height = unit_height,
+            dovetail_count = dovetail_count,
+            include_faceplate = false,
+            fn = fn
+        );
+    } else {
+        dovetail_joiner_right(
+            unit_height = unit_height,
+            dovetail_count = dovetail_count,
+            include_faceplate = false,
+            fn = fn
+        );
+    }
+}
+
+
+// ============================================================================
 // Preview
 // ============================================================================
 

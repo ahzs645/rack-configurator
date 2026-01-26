@@ -83,6 +83,14 @@ export const JOINER_SCREW_TYPE_LABELS: Record<JoinerScrewType, string> = {
   '1/4-20': '1/4-20 (Imperial)',
 };
 
+// Joiner type options (how split panels connect)
+export type JoinerType = 'screw' | 'dovetail';
+
+export const JOINER_TYPE_LABELS: Record<JoinerType, string> = {
+  screw: 'Screw & Nut',
+  dovetail: 'Dovetail (Tool-free)',
+};
+
 // Placed device on the rack
 export interface PlacedDevice {
   id: string;          // Unique instance ID
@@ -131,6 +139,7 @@ export interface RackConfig {
   renderMode: RenderMode;
 
   // Joiner settings (for split panels)
+  joinerType: JoinerType;  // "screw" or "dovetail"
   joinerNutSide: JoinerNutSide;
   joinerNutDepth: number;
   joinerScrewType: JoinerScrewType;
@@ -187,6 +196,7 @@ export const DEFAULT_RACK_CONFIG: RackConfig = {
   splitPosition: 0,  // 0 = auto
   splitLocked: false,
   renderMode: 'single',
+  joinerType: 'screw',  // Default to screw joiners
   joinerNutSide: 'right',
   joinerNutDepth: 4.5,
   joinerScrewType: 'M5',

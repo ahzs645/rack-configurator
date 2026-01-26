@@ -110,6 +110,7 @@ function generateRenderCall(config: RackConfig): string {
     lines.push(`    show_preview = ${config.showPreview},`);
     lines.push(`    show_labels = ${config.showLabels},`);
     lines.push(`    render_part = "${config.renderMode}",`);
+    lines.push(`    joiner_type = "${config.joinerType || 'screw'}",`);
     lines.push(`    joiner_nut_side = "${config.joinerNutSide || 'right'}",`);
     lines.push(`    joiner_nut_depth = ${config.joinerNutDepth || 4.5},`);
     lines.push(`    joiner_screw_type = "${config.joinerScrewType || 'M5'}",`);

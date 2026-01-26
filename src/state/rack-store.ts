@@ -8,6 +8,7 @@ import type {
   BackStyle,
   VentType,
   RenderMode,
+  JoinerType,
   JoinerNutSide,
   JoinerScrewType,
 } from './types';
@@ -55,6 +56,7 @@ interface RackStore {
   setSplitPosition: (position: number) => void;
   setSplitLocked: (locked: boolean) => void;
   setRenderMode: (mode: RenderMode) => void;
+  setJoinerType: (type: JoinerType) => void;
   setJoinerNutSide: (side: JoinerNutSide) => void;
   setJoinerNutDepth: (depth: number) => void;
   setJoinerScrewType: (screwType: JoinerScrewType) => void;
@@ -265,6 +267,11 @@ export const useRackStore = create<RackStore>((set, get) => ({
   setRenderMode: (renderMode) =>
     set((state) => ({
       config: { ...state.config, renderMode },
+    })),
+
+  setJoinerType: (joinerType) =>
+    set((state) => ({
+      config: { ...state.config, joinerType },
     })),
 
   setJoinerNutSide: (joinerNutSide) => {

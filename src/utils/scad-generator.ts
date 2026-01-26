@@ -64,7 +64,7 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
     lines.push(`    show_preview = ${showPreview},`);
     lines.push(`    show_labels = ${showLabels},`);
     lines.push(`    render_part = "${config.renderMode}",`);
-    console.log('Generating SCAD with joinerNutSide:', config.joinerNutSide);
+    lines.push(`    joiner_type = "${config.joinerType || 'screw'}",`);
     lines.push(`    joiner_nut_side = "${config.joinerNutSide || 'right'}",`);
     lines.push(`    joiner_nut_depth = ${config.joinerNutDepth || 4.5},`);
     lines.push(`    joiner_screw_type = "${config.joinerScrewType || 'M5'}",`);

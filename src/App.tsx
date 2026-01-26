@@ -9,8 +9,9 @@ import { MainViewer3D } from './components/MainViewer3D';
 import { useRackStore } from './state/rack-store';
 import type { RackDevice } from './data/devices';
 import { getDevice } from './data/devices';
-import { getPlacedDeviceDimensions } from './utils/scad-generator';
+import { getPlacedDeviceDimensions, parseConfigJson } from './utils/scad-generator';
 import { clampToRackBounds, calculateFitScale } from './utils/coordinates';
+import type { RackConfig } from './state/types';
 
 type MainViewMode = '2d' | '3d';
 
@@ -37,6 +38,7 @@ function App() {
     removeDevice,
     updateDevicePosition,
     selectDevice,
+    loadConfig,
   } = useRackStore();
 
   // Track active drag for overlay
@@ -47,6 +49,65 @@ function App() {
 
   // Main view mode toggle
   const [mainViewMode, setMainViewMode] = useState<MainViewMode>('2d');
+
+  // Track file drag-and-drop state
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const dragCounter = useRef(0);
+
+  // Handle file drag events for loading JSON configs
+  const handleFileDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingFile(true);
+    }
+  }, []);
+
+  const handleFileDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDraggingFile(false);
+    }
+  }, []);
+
+  const handleFileDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    dragCounter.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    const file = files[0];
+    if (!file.name.endsWith('.json')) {
+      console.warn('Only JSON files are supported');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const parsedConfig = parseConfigJson(content);
+      if (parsedConfig) {
+        loadConfig(parsedConfig as RackConfig);
+      } else {
+        console.error('Invalid rack configuration file');
+      }
+    };
+    reader.onerror = () => {
+      console.error('Error reading file');
+    };
+    reader.readAsText(file);
+  }, [loadConfig]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback(
@@ -231,7 +292,25 @@ function App() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="h-screen flex flex-col bg-gray-900 overflow-hidden">
+      <div
+        className="h-screen flex flex-col bg-gray-900 overflow-hidden relative"
+        onDragEnter={handleFileDragEnter}
+        onDragLeave={handleFileDragLeave}
+        onDragOver={handleFileDragOver}
+        onDrop={handleFileDrop}
+      >
+        {/* File drop overlay */}
+        {isDraggingFile && (
+          <div className="absolute inset-0 z-50 bg-blue-900/80 flex items-center justify-center pointer-events-none">
+            <div className="bg-gray-800 border-2 border-dashed border-blue-400 rounded-xl p-12 text-center">
+              <svg className="w-16 h-16 mx-auto mb-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="text-xl font-medium text-white">Drop JSON config to load</p>
+              <p className="text-sm text-gray-400 mt-2">Release to load rack configuration</p>
+            </div>
+          </div>
+        )}
         {/* Toolbar */}
         <RackToolbar />
 
