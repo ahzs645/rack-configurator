@@ -70,9 +70,13 @@ function joiner_default_depth(screw_type) =
     (screw_type == "1/4-20") ? 6.0 :
     4.5;  // Default M5
 
-// Default captive nut floor thickness (thin layer covering the nut pocket)
+// Default captive nut floor thickness (thin layer covering the nut pocket on outer face)
 // Set to 0 for open pocket, > 0 for captive nut
 _DEFAULT_NUT_FLOOR = 0;
+
+// Minimum inner floor thickness - the material the nut pulls against when bolt is tightened
+// This floor is on the mating surface side, between hex pocket and joint face
+_MIN_INNER_FLOOR = 1.0;
 
 // EIA-310 standard
 _EIA_UNIT_HEIGHT = 44.45;      // 1U = 44.45mm
@@ -242,17 +246,20 @@ module faceplate_joiner_left(
 
             // Hex nut pocket (if this side has nuts)
             if (has_nut) {
-                // Captive nut pocket: starts after floor thickness, recessed into the wall
-                // Floor is on the OUTER face (away from joint), nut is inserted from inside
-                // pocket_start is distance from outer face where hex pocket begins
-                pocket_start = nut_floor;
+                // Two floors:
+                // 1. nut_floor (outer) - optional floor on outer face for captive nut
+                // 2. inner_floor - mandatory floor on mating face for nut to pull against
+                //
+                // Limit pocket depth so it doesn't cut through the inner floor
+                max_pocket_depth = wall_thickness - nut_floor - _MIN_INNER_FLOOR;
+                actual_pocket_depth = min(pocket_depth, max_pocket_depth);
 
-                // Hexagonal pocket for captive nut
-                // Starts at outer face + floor, extends inward
-                translate([-wall_thickness + pocket_start, y_pos, screw_z])
+                // Hexagonal pocket for nut
+                // Starts at outer face + nut_floor, extends inward but stops before inner floor
+                translate([-wall_thickness + nut_floor, y_pos, screw_z])
                     rotate([0, 90, 0])
                         rotate([0, 0, 30])
-                            linear_extrude(height = pocket_depth + 0.1)
+                            linear_extrude(height = actual_pocket_depth + 0.1)
                                 hexagon_2d(nut_af);
             }
         }
@@ -323,17 +330,21 @@ module faceplate_joiner_right(
 
             // Hex nut pocket (if this side has nuts)
             if (has_nut) {
-                // Captive nut pocket: starts after floor thickness, recessed into the wall
-                // Floor is on the OUTER face (away from joint), nut is inserted from inside
-                pocket_start = nut_floor;
+                // Two floors:
+                // 1. nut_floor (outer) - optional floor on outer face for captive nut
+                // 2. inner_floor - mandatory floor on mating face for nut to pull against
+                //
+                // Limit pocket depth so it doesn't cut through the inner floor
+                max_pocket_depth = wall_thickness - nut_floor - _MIN_INNER_FLOOR;
+                actual_pocket_depth = min(pocket_depth, max_pocket_depth);
 
-                // Hexagonal pocket for captive nut
+                // Hexagonal pocket for nut
                 // For right side: outer face is at x=wall_thickness
-                // Pocket starts at (wall_thickness - pocket_start - pocket_depth) and goes toward outer face
-                translate([wall_thickness - pocket_start - pocket_depth, y_pos, screw_z])
+                // Pocket starts inward from outer face, leaving inner floor at x=0
+                translate([_MIN_INNER_FLOOR, y_pos, screw_z])
                     rotate([0, 90, 0])
                         rotate([0, 0, 30])
-                            linear_extrude(height = pocket_depth + 0.1)
+                            linear_extrude(height = actual_pocket_depth + 0.1)
                                 hexagon_2d(nut_af);
             }
         }
