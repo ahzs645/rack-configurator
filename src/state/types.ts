@@ -38,6 +38,23 @@ export const EAR_STYLE_LABELS: Record<EarStyle, string> = {
 
 export type EarPosition = 'bottom' | 'top' | 'center';
 
+// Toolless hook pattern spacing (standard rack hole spacing)
+export const TOOLLESS_HOOK_SPACING = 47.625; // mm (4.7625cm = 1.875" = 3/16 of 10")
+
+// Calculate how many hook positions fit in a given rack height
+export function getToollessHookCount(rackU: number): number {
+  const height = rackU * RACK_CONSTANTS.UNIT_HEIGHT;
+  // Hook height is 30.4mm, we need at least that much space for a hook
+  // First hook starts at bottom (0), subsequent hooks at spacing intervals
+  const hookHeight = 30.4; // HOOK_HEIGHT from rack_ears.scad
+  return Math.floor((height - hookHeight) / TOOLLESS_HOOK_SPACING) + 1;
+}
+
+// Get the Z position (from bottom) of a hook at a given index
+export function getToollessHookPosition(index: number): number {
+  return index * TOOLLESS_HOOK_SPACING;
+}
+
 export type BackStyle = 'solid' | 'vent' | 'none';
 
 export const BACK_STYLE_LABELS: Record<BackStyle, string> = {
@@ -111,8 +128,9 @@ export interface RackConfig {
   rackU: 1 | 2 | 3 | 4 | 5 | 6;
   panelWidth: number; // Custom panel width in mm (default: 450.85 for 19" rack)
   earStyle: EarStyle;
-  earPosition: EarPosition;
+  earPosition: EarPosition;  // Legacy - kept for non-toolless ear styles
   earThickness: number;
+  toollessHookPattern: boolean[]; // Which hooks are enabled in the repeating pattern
   backStyle: BackStyle;
 
   // Ventilation settings
@@ -178,8 +196,9 @@ export const DEFAULT_RACK_CONFIG: RackConfig = {
   rackU: 2,
   panelWidth: RACK_CONSTANTS.PANEL_WIDTH, // 450.85mm (standard 19" rack)
   earStyle: 'toolless',
-  earPosition: 'bottom',
+  earPosition: 'bottom',  // Legacy - kept for non-toolless ear styles
   earThickness: 2.9,
+  toollessHookPattern: [true, true], // Default: all hooks enabled for 2U
   backStyle: 'vent',
   ventType: 'honeycomb',
   hexDiameter: 8,

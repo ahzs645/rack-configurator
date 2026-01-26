@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useRackStore } from '../state/rack-store';
 import type { ViewConfig } from '../utils/coordinates';
@@ -12,7 +12,7 @@ import {
 } from '../utils/coordinates';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 import { DeviceOnRack } from './DeviceOnRack';
-import { RACK_CONSTANTS, type EarStyle, type EarPosition } from '../state/types';
+import { RACK_CONSTANTS, TOOLLESS_HOOK_SPACING, getToollessHookCount, type EarStyle, type EarPosition } from '../state/types';
 
 const PADDING = 40;
 
@@ -38,46 +38,34 @@ interface EarProps {
   rackBounds: { x: number; y: number; width: number; height: number };
   earStyle: EarStyle;
   earPosition: EarPosition;
+  hookPattern: boolean[];  // Which hooks are enabled (for toolless style)
+  rackU: number;
   view: ViewConfig;
 }
 
-function RackEar({ side, rackBounds, earStyle, earPosition, view }: EarProps) {
+function RackEar({ side, rackBounds, earStyle, earPosition, hookPattern, rackU, view }: EarProps) {
   if (earStyle === 'none') return null;
 
   // Convert dimensions to SVG pixels
   const hookHeightPx = rackSizeToSvg(HOOK_HEIGHT, view);
-
-  // Calculate hook Y position based on earPosition
-  // In SVG, Y increases downward, but in rack coords Y=0 is bottom
-  // rackBounds.y is the TOP of the rack in SVG coords
-  let hookOffsetY: number;
-  switch (earPosition) {
-    case 'top':
-      hookOffsetY = 0; // Hook at top
-      break;
-    case 'center':
-      hookOffsetY = (rackBounds.height - hookHeightPx) / 2; // Hook centered
-      break;
-    case 'bottom':
-    default:
-      hookOffsetY = rackBounds.height - hookHeightPx; // Hook at bottom
-      break;
-  }
-
-  const hookY = rackBounds.y + hookOffsetY;
 
   // Position hook on left or right of rack panel
   // For left side: hook extends to the left of the panel
   // For right side: hook extends to the right of the panel
   const panelEdgeX = side === 'left' ? rackBounds.x : rackBounds.x + rackBounds.width;
 
-  // The backplate_profile polygon from OpenSCAD (rack_ears.scad lines 84-99)
-  // Original OpenSCAD coordinates (X: -12.1 to 0, Y: 2.25 to 32.65)
-  // For SVG: flip Y axis (SVG Y = maxY - OpenSCAD_Y) and mirror X for left/right side
-  const renderToollessHook = () => {
+  // Render a single toolless hook at a given Y offset from bottom of rack
+  const renderToollessHookAtPosition = (hookIndex: number) => {
     const s = (mm: number) => rackSizeToSvg(mm, view);
     const dir = side === 'left' ? -1 : 1;
     const maxY = 32.65; // Top of hook in OpenSCAD coords
+
+    // Calculate Y position for this hook
+    // Hooks are positioned from bottom, so index 0 is at bottom
+    // In SVG, Y increases downward, so we subtract from bottom of rack
+    const hookOffsetFromBottom = hookIndex * TOOLLESS_HOOK_SPACING;
+    const hookOffsetFromBottomPx = rackSizeToSvg(hookOffsetFromBottom, view);
+    const hookY = rackBounds.y + rackBounds.height - hookHeightPx - hookOffsetFromBottomPx;
 
     // Exact backplate_profile polygon points, converted to SVG coordinates
     // OpenSCAD: Y increases up, X=0 is panel edge, negative X extends outward
@@ -108,6 +96,7 @@ function RackEar({ side, rackBounds, earStyle, earPosition, view }: EarProps) {
 
     return (
       <path
+        key={`hook-${side}-${hookIndex}`}
         d={pathData}
         fill="#374151"
         stroke="#4b5563"
@@ -115,6 +104,39 @@ function RackEar({ side, rackBounds, earStyle, earPosition, view }: EarProps) {
       />
     );
   };
+
+  // Render all enabled hooks based on the pattern
+  const renderToollessHooks = () => {
+    const hookCount = getToollessHookCount(rackU);
+    const hooks: React.ReactNode[] = [];
+
+    for (let i = 0; i < hookCount; i++) {
+      // Check if this hook is enabled (default to first hook if pattern is shorter)
+      const isEnabled = i < hookPattern.length ? hookPattern[i] : (i === 0);
+      if (isEnabled) {
+        hooks.push(renderToollessHookAtPosition(i));
+      }
+    }
+
+    return <g>{hooks}</g>;
+  };
+
+  // Legacy: Calculate hook Y position based on earPosition (for fusion/simple)
+  let hookOffsetY: number;
+  switch (earPosition) {
+    case 'top':
+      hookOffsetY = 0; // Hook at top
+      break;
+    case 'center':
+      hookOffsetY = (rackBounds.height - hookHeightPx) / 2; // Hook centered
+      break;
+    case 'bottom':
+    default:
+      hookOffsetY = rackBounds.height - hookHeightPx; // Hook at bottom
+      break;
+  }
+
+  const hookY = rackBounds.y + hookOffsetY;
 
   const renderFusionEar = () => {
     // Fusion style uses the same L-bracket as toolless but with mounting holes
@@ -179,7 +201,7 @@ function RackEar({ side, rackBounds, earStyle, earPosition, view }: EarProps) {
 
   switch (earStyle) {
     case 'toolless':
-      return renderToollessHook();
+      return renderToollessHooks();
     case 'fusion':
       return renderFusionEar();
     case 'simple':
@@ -521,6 +543,8 @@ export function RackConfigurator() {
           rackBounds={rackBounds}
           earStyle={config.earStyle}
           earPosition={config.earPosition}
+          hookPattern={config.toollessHookPattern}
+          rackU={config.rackU}
           view={view}
         />
         <RackEar
@@ -528,6 +552,8 @@ export function RackConfigurator() {
           rackBounds={rackBounds}
           earStyle={config.earStyle}
           earPosition={config.earPosition}
+          hookPattern={config.toollessHookPattern}
+          rackU={config.rackU}
           view={view}
         />
 

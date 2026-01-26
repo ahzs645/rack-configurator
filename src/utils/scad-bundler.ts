@@ -101,6 +101,7 @@ function generateRenderCall(config: RackConfig): string {
     lines.push(`    ear_style = "${config.earStyle}",`);
     lines.push(`    ear_thickness = ${config.earThickness},`);
     lines.push(`    ear_position = "${config.earPosition}",`);
+    lines.push(`    hook_pattern = ${JSON.stringify(config.toollessHookPattern || [true])},`);
     lines.push(`    clearance = ${config.clearance},`);
     lines.push(`    hex_diameter = ${config.hexDiameter},`);
     lines.push(`    hex_wall = ${config.hexWall},`);
@@ -127,6 +128,7 @@ function generateRenderCall(config: RackConfig): string {
     lines.push(`    ear_style = "${config.earStyle}",`);
     lines.push(`    ear_thickness = ${config.earThickness},`);
     lines.push(`    ear_position = "${config.earPosition}",`);
+    lines.push(`    hook_pattern = ${JSON.stringify(config.toollessHookPattern || [true])},`);
     lines.push(`    clearance = ${config.clearance},`);
     lines.push(`    hex_diameter = ${config.hexDiameter},`);
     lines.push(`    hex_wall = ${config.hexWall},`);

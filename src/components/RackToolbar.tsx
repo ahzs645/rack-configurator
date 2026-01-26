@@ -2,7 +2,8 @@ import { useState, useRef } from 'react';
 import { useRackStore } from '../state/rack-store';
 import type { RackConfig } from '../state/types';
 import type { EarStyle, EarPosition } from '../state/types';
-import { EAR_STYLE_LABELS } from '../state/types';
+import { EAR_STYLE_LABELS, getToollessHookCount } from '../state/types';
+import { ToollessHooksModal } from './ToollessHooksModal';
 import { downloadScadFile, downloadConfigJson, generateScadCode, generateScadCodeForSide, downloadStl, downloadSplitStlZip } from '../utils/scad-generator';
 import { downloadBundledScadFile } from '../utils/scad-bundler';
 import { AdvancedSettingsModal } from './AdvancedSettingsModal';
@@ -12,6 +13,7 @@ import { initializeWorker, renderScad, setStatusCallback, isWorkerReady } from '
 
 export function RackToolbar() {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showHooksModal, setShowHooksModal] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -297,19 +299,32 @@ export function RackToolbar() {
         </select>
       </div>
 
-      {/* Ear Position */}
-      <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-300">Position:</label>
-        <select
-          value={config.earPosition}
-          onChange={(e) => setEarPosition(e.target.value as EarPosition)}
-          className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+      {/* Ear Position (for non-toolless) or Hook Pattern button (for toolless) */}
+      {config.earStyle === 'toolless' ? (
+        <button
+          onClick={() => setShowHooksModal(true)}
+          className="flex items-center gap-1 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded transition-colors"
+          title="Configure hook pattern"
         >
-          <option value="bottom">Bottom</option>
-          <option value="top">Top</option>
-          <option value="center">Center</option>
-        </select>
-      </div>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Hooks ({config.toollessHookPattern.filter(h => h).length}/{getToollessHookCount(config.rackU)})
+        </button>
+      ) : config.earStyle !== 'none' ? (
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-300">Position:</label>
+          <select
+            value={config.earPosition}
+            onChange={(e) => setEarPosition(e.target.value as EarPosition)}
+            className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+          >
+            <option value="bottom">Bottom</option>
+            <option value="top">Top</option>
+            <option value="center">Center</option>
+          </select>
+        </div>
+      ) : null}
 
       {/* Divider */}
       <div className="w-px h-6 bg-gray-600" />
@@ -609,6 +624,11 @@ export function RackToolbar() {
       {/* Advanced Settings Modal */}
       {showAdvanced && (
         <AdvancedSettingsModal onClose={() => setShowAdvanced(false)} />
+      )}
+
+      {/* Toolless Hooks Modal */}
+      {showHooksModal && (
+        <ToollessHooksModal onClose={() => setShowHooksModal(false)} />
       )}
     </div>
   );

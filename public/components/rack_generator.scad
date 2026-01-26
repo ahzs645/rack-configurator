@@ -119,6 +119,7 @@ module rack_faceplate(
     ear_style = "toolless",
     ear_thickness = 2.9,
     ear_position = "bottom",
+    hook_pattern = [true],  // Array of booleans for toolless hook positions
     clearance = _RG_DEFAULT_CLEARANCE,
     hex_diameter = _RG_DEFAULT_HEX_DIA,
     hex_wall = _RG_DEFAULT_HEX_WALL,
@@ -143,7 +144,7 @@ module rack_faceplate(
             if (ear_style != "none") {
                 _rg_rack_ears(
                     width, height, plate_thick,
-                    ear_style, ear_thickness, ear_position, rack_u
+                    ear_style, ear_thickness, ear_position, rack_u, hook_pattern
                 );
             }
 
@@ -212,6 +213,7 @@ module rack_faceplate_split(
     ear_style = "toolless",
     ear_thickness = 2.9,
     ear_position = "bottom",
+    hook_pattern = [true],  // Array of booleans for toolless hook positions
     clearance = _RG_DEFAULT_CLEARANCE,
     hex_diameter = _RG_DEFAULT_HEX_DIA,
     hex_wall = _RG_DEFAULT_HEX_WALL,
@@ -247,7 +249,7 @@ module rack_faceplate_split(
             rotate([90, 0, 0])
             _rg_split_half_left(
                 rack_u, left_width, height, left_devices,
-                plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
+                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x,  // Pass full panel center
@@ -257,7 +259,7 @@ module rack_faceplate_split(
             color("SteelBlue")
             _rg_split_half_left(
                 rack_u, left_width, height, left_devices,
-                plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
+                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x,  // Pass full panel center
@@ -275,7 +277,7 @@ module rack_faceplate_split(
             rotate([90, 0, 0])
             _rg_split_half_right(
                 rack_u, right_width, height, right_devices,
-                plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
+                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x, left_width,  // Pass full center and offset
@@ -285,7 +287,7 @@ module rack_faceplate_split(
             color("Coral")
             _rg_split_half_right(
                 rack_u, right_width, height, right_devices,
-                plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
+                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x, left_width,  // Pass full center and offset
@@ -337,22 +339,14 @@ module _rg_faceplate_base(width, height, thickness, radius) {
 }
 
 // Rack ear placement
-module _rg_rack_ears(width, height, plate_thick, style, thickness, position, rack_u) {
+module _rg_rack_ears(width, height, plate_thick, style, thickness, position, rack_u, hook_pattern = [true]) {
     if (style == "toolless") {
-        // Left ear
-        positioned_rack_hook(
+        // Use patterned hooks based on the hook_pattern array
+        patterned_rack_hooks_pair(
             thickness = thickness,
             rack_height = height,
-            position = position,
-            side = "left"
-        );
-        // Right ear
-        translate([width, 0, 0])
-        positioned_rack_hook(
-            thickness = thickness,
-            rack_height = height,
-            position = position,
-            side = "right"
+            panel_width = width,
+            hook_pattern = hook_pattern
         );
     }
     else if (style == "fusion") {
@@ -632,7 +626,7 @@ module _rg_preview_labels(devices, center_x, center_z) {
 
 module _rg_split_half_left(
     rack_u, width, height, devices,
-    plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
+    plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
     clearance, hex_dia, hex_wall, heavy, back_style,
     cutout_edge, cutout_radius, show_preview, show_labels,
     full_center_x = undef,  // Full panel center for device positioning
@@ -655,7 +649,7 @@ module _rg_split_half_left(
             if (ear_style != "none") {
                 _rg_rack_ear_single(
                     height, plate_thick, ear_style, ear_thickness, ear_position, rack_u,
-                    "left", 0
+                    "left", 0, hook_pattern
                 );
             }
 
@@ -694,7 +688,7 @@ module _rg_split_half_left(
 
 module _rg_split_half_right(
     rack_u, width, height, devices,
-    plate_thick, corner_radius, ear_style, ear_thickness, ear_position,
+    plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
     clearance, hex_dia, hex_wall, heavy, back_style,
     cutout_edge, cutout_radius, show_preview, show_labels,
     full_center_x = undef,  // Full panel center
@@ -719,7 +713,7 @@ module _rg_split_half_right(
             if (ear_style != "none") {
                 _rg_rack_ear_single(
                     height, plate_thick, ear_style, ear_thickness, ear_position, rack_u,
-                    "right", width
+                    "right", width, hook_pattern
                 );
             }
 
@@ -757,13 +751,13 @@ module _rg_split_half_right(
 }
 
 // Single rack ear for split panels
-module _rg_rack_ear_single(height, plate_thick, style, thickness, position, rack_u, side, x_offset) {
+module _rg_rack_ear_single(height, plate_thick, style, thickness, position, rack_u, side, x_offset, hook_pattern = [true]) {
     if (style == "toolless") {
         translate([x_offset, 0, 0])
-        positioned_rack_hook(
+        patterned_rack_hooks(
             thickness = thickness,
             rack_height = height,
-            position = position,
+            hook_pattern = hook_pattern,
             side = side
         );
     }

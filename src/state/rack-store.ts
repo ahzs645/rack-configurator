@@ -12,7 +12,7 @@ import type {
   JoinerNutSide,
   JoinerScrewType,
 } from './types';
-import { DEFAULT_RACK_CONFIG } from './types';
+import { DEFAULT_RACK_CONFIG, getToollessHookCount } from './types';
 
 interface RackStore {
   // Current configuration
@@ -38,6 +38,8 @@ interface RackStore {
   setEarStyle: (style: EarStyle) => void;
   setEarPosition: (position: EarPosition) => void;
   setEarThickness: (thickness: number) => void;
+  setToollessHookPattern: (pattern: boolean[]) => void;
+  toggleToollessHook: (index: number) => void;
   setBackStyle: (style: BackStyle) => void;
   setVentType: (type: VentType) => void;
   setPlateThickness: (thickness: number) => void;
@@ -113,9 +115,32 @@ export const useRackStore = create<RackStore>((set, get) => ({
 
   // Rack settings
   setRackU: (rackU) =>
-    set((state) => ({
-      config: { ...state.config, rackU },
-    })),
+    set((state) => {
+      // When rack U changes, adjust the hook pattern to fit the new size
+      const newHookCount = getToollessHookCount(rackU);
+      const currentPattern = state.config.toollessHookPattern;
+      let newPattern: boolean[];
+
+      if (currentPattern.length >= newHookCount) {
+        // Truncate pattern if rack is smaller
+        newPattern = currentPattern.slice(0, newHookCount);
+      } else {
+        // Extend pattern with true values if rack is larger (hooks on by default)
+        newPattern = [...currentPattern];
+        while (newPattern.length < newHookCount) {
+          newPattern.push(true);
+        }
+      }
+
+      // Ensure at least one hook is enabled
+      if (!newPattern.some(h => h) && newPattern.length > 0) {
+        newPattern[0] = true;
+      }
+
+      return {
+        config: { ...state.config, rackU, toollessHookPattern: newPattern },
+      };
+    }),
 
   setPanelWidth: (panelWidth) =>
     set((state) => ({
@@ -196,6 +221,31 @@ export const useRackStore = create<RackStore>((set, get) => ({
     set((state) => ({
       config: { ...state.config, earThickness },
     })),
+
+  setToollessHookPattern: (toollessHookPattern) =>
+    set((state) => ({
+      config: { ...state.config, toollessHookPattern },
+    })),
+
+  toggleToollessHook: (index) =>
+    set((state) => {
+      const newPattern = [...state.config.toollessHookPattern];
+      // Ensure array is long enough
+      while (newPattern.length <= index) {
+        newPattern.push(false);
+      }
+      newPattern[index] = !newPattern[index];
+
+      // Ensure at least one hook is enabled
+      if (!newPattern.some(h => h)) {
+        // If we just disabled the last hook, re-enable it
+        newPattern[index] = true;
+      }
+
+      return {
+        config: { ...state.config, toollessHookPattern: newPattern },
+      };
+    }),
 
   // Split panel settings
   setIsSplit: (isSplit) =>

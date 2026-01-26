@@ -23,6 +23,10 @@ HOOK_HEIGHT = 30.4;
 HOOK_MIN_Y = 2.25;
 HOOK_MAX_Y = 32.65;
 
+// Toolless hook pattern spacing (standard rack hole spacing)
+// 4.7625cm = 47.625mm = 1.875" = 3/16 of 10"
+HOOK_SPACING = 47.625;
+
 /*
  * Create a rounded cube (simplified version without BOSL2)
  *
@@ -478,4 +482,91 @@ module positioned_rack_hooks_pair(
     // Right hook at X=panel_width
     translate([panel_width, 0, 0])
     positioned_rack_hook(thickness, rack_height, position, "right", fn);
+}
+
+/*
+ * Create a toolless rack hook at a specific Z offset
+ *
+ * Parameters:
+ *   thickness - material thickness
+ *   z_offset - Z position from bottom of faceplate
+ *   side - "left" or "right"
+ *   fn - detail level
+ */
+module rack_hook_at_offset(
+    thickness = 2.9,
+    z_offset = 0,
+    side = "left",
+    fn = 32
+)
+{
+    if (side == "left") {
+        translate([0, 0, z_offset])
+        rotate([90, 0, 0])
+        mirror([1, 0, 0])
+        rotate([0, 90, 90])
+        rack_hook(thickness, fn);
+    } else {
+        translate([0, 0, z_offset])
+        rotate([90, 0, 0])
+        rotate([0, 90, 90])
+        rack_hook(thickness, fn);
+    }
+}
+
+/*
+ * Create multiple toolless rack hooks based on a pattern
+ * Hooks are positioned at regular intervals (HOOK_SPACING) from the bottom
+ *
+ * Parameters:
+ *   thickness - material thickness
+ *   rack_height - total height of the faceplate (in mm)
+ *   hook_pattern - array of booleans indicating which hooks are enabled
+ *                  e.g., [true, false, true] = hooks at positions 0 and 2
+ *   side - "left" or "right"
+ *   fn - detail level
+ */
+module patterned_rack_hooks(
+    thickness = 2.9,
+    rack_height = 88.9,
+    hook_pattern = [true],
+    side = "left",
+    fn = 32
+)
+{
+    // Calculate how many hook positions fit
+    max_hooks = floor((rack_height - HOOK_HEIGHT) / HOOK_SPACING) + 1;
+
+    for (i = [0 : min(len(hook_pattern), max_hooks) - 1]) {
+        if (hook_pattern[i]) {
+            z_offset = i * HOOK_SPACING;
+            rack_hook_at_offset(thickness, z_offset, side, fn);
+        }
+    }
+}
+
+/*
+ * Create a pair of patterned toolless rack hooks
+ *
+ * Parameters:
+ *   thickness - material thickness
+ *   rack_height - total height of the faceplate (in mm)
+ *   panel_width - width between the hooks (for right side positioning)
+ *   hook_pattern - array of booleans indicating which hooks are enabled
+ *   fn - detail level
+ */
+module patterned_rack_hooks_pair(
+    thickness = 2.9,
+    rack_height = 88.9,
+    panel_width = 450.85,
+    hook_pattern = [true],
+    fn = 32
+)
+{
+    // Left hooks at X=0
+    patterned_rack_hooks(thickness, rack_height, hook_pattern, "left", fn);
+
+    // Right hooks at X=panel_width
+    translate([panel_width, 0, 0])
+    patterned_rack_hooks(thickness, rack_height, hook_pattern, "right", fn);
 }
