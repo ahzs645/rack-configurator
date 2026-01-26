@@ -184,6 +184,7 @@ module faceplate_joiner_left(
 
             // Hex nut pocket on outer face (if this side has nuts)
             if (has_nut) {
+                // Hexagonal pocket for nut
                 translate([-wall_thickness - 0.1, y_pos, screw_z])
                     rotate([0, 90, 0])
                         rotate([0, 0, 30])
@@ -249,6 +250,7 @@ module faceplate_joiner_right(
 
             // Hex nut pocket on outer face (if this side has nuts)
             if (has_nut) {
+                // Hexagonal pocket for nut
                 translate([wall_thickness - nut_pocket_depth + 0.1, y_pos, screw_z])
                     rotate([0, 90, 0])
                         rotate([0, 0, 30])

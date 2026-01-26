@@ -8,7 +8,15 @@
 import type { RackConfig, PlacedDevice } from '../state/types';
 
 // Component file contents will be embedded at build time or fetched at runtime
+// Cache is cleared on page reload to pick up file changes
 let componentCache: Map<string, string> | null = null;
+
+/**
+ * Clear the component cache to force re-fetching
+ */
+export function clearComponentCache(): void {
+  componentCache = null;
+}
 
 // List of component files in dependency order
 const COMPONENT_FILES = [
@@ -101,7 +109,9 @@ function generateRenderCall(config: RackConfig): string {
     lines.push(`    cutout_radius = ${config.cutoutRadius},`);
     lines.push(`    show_preview = ${config.showPreview},`);
     lines.push(`    show_labels = ${config.showLabels},`);
-    lines.push(`    render_part = "${config.renderMode}"`);
+    lines.push(`    render_part = "${config.renderMode}",`);
+    lines.push(`    joiner_nut_side = "${config.joinerNutSide || 'right'}",`);
+    lines.push(`    joiner_nut_depth = ${config.joinerNutDepth || 4.5}`);
     lines.push(');');
   } else {
     const devicesCode = generateDevicesArray(config.devices);

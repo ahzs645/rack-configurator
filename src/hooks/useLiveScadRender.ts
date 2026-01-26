@@ -32,6 +32,8 @@ function getConfigHash(config: RackConfig): string {
     isSplit: config.isSplit,
     splitPosition: config.splitPosition,
     renderMode: config.renderMode,
+    joinerNutSide: config.joinerNutSide,
+    joinerNutDepth: config.joinerNutDepth,
     devices: config.devices,
     leftDevices: config.leftDevices,
     rightDevices: config.rightDevices,

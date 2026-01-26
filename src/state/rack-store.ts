@@ -257,10 +257,16 @@ export const useRackStore = create<RackStore>((set, get) => ({
       config: { ...state.config, renderMode },
     })),
 
-  setJoinerNutSide: (joinerNutSide) =>
-    set((state) => ({
-      config: { ...state.config, joinerNutSide },
-    })),
+  setJoinerNutSide: (joinerNutSide) => {
+    console.log('setJoinerNutSide called with:', joinerNutSide);
+    set((state) => {
+      console.log('Previous joinerNutSide:', state.config.joinerNutSide);
+      console.log('New joinerNutSide:', joinerNutSide);
+      return {
+        config: { ...state.config, joinerNutSide },
+      };
+    });
+  },
 
   setJoinerNutDepth: (joinerNutDepth) =>
     set((state) => ({

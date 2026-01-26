@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useRackStore } from '../state/rack-store';
-import type { MountType, PlacedDevice, BackStyle } from '../state/types';
-import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS } from '../state/types';
+import type { MountType, PlacedDevice, BackStyle, JoinerNutSide } from '../state/types';
+import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_NUT_SIDE_LABELS } from '../state/types';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 
 // Placed device list item
@@ -56,6 +57,8 @@ function PlacedDeviceItem({ device, isSelected, side, onSelect, onRemove }: Plac
 }
 
 export function PropertyPanel() {
+  const [joinerSelected, setJoinerSelected] = useState(false);
+
   const {
     config,
     selectedDeviceId,
@@ -65,6 +68,8 @@ export function PropertyPanel() {
     updateDeviceBackStyle,
     removeDevice,
     moveDeviceToSide,
+    setJoinerNutSide,
+    setJoinerNutDepth,
   } = useRackStore();
 
   // Get all placed devices with their side info
@@ -118,20 +123,49 @@ export function PropertyPanel() {
             {allPlacedDevices.length}
           </span>
         </div>
-        {allPlacedDevices.length === 0 ? (
+        {allPlacedDevices.length === 0 && !config.isSplit ? (
           <div className="text-gray-500 text-xs text-center py-4">
             No devices placed yet.<br />
             Drag devices from the library.
           </div>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
+            {/* Joiner item (only in split mode) */}
+            {config.isSplit && (
+              <div
+                onClick={() => {
+                  setJoinerSelected(true);
+                  selectDevice(null);
+                }}
+                className={`relative rounded p-2 cursor-pointer transition-colors ${
+                  joinerSelected
+                    ? 'bg-purple-600 ring-2 ring-purple-400'
+                    : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white font-medium">Split Joiner</div>
+                    <div className="text-xs text-gray-400">
+                      M5 bolt joint • Nut on {config.joinerNutSide || 'right'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {allPlacedDevices.map(({ device, side }) => (
               <PlacedDeviceItem
                 key={device.id}
                 device={device}
-                isSelected={selectedDeviceId === device.id}
+                isSelected={selectedDeviceId === device.id && !joinerSelected}
                 side={side}
-                onSelect={() => selectDevice(device.id)}
+                onSelect={() => {
+                  setJoinerSelected(false);
+                  selectDevice(device.id);
+                }}
                 onRemove={() => removeDevice(device.id)}
               />
             ))}
@@ -139,8 +173,73 @@ export function PropertyPanel() {
         )}
       </div>
 
+      {/* Joiner Properties */}
+      {joinerSelected && config.isSplit && (
+        <div className="p-3 border-b border-gray-700">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">Joiner Properties</h3>
+
+          {/* Joiner info */}
+          <div className="mb-3">
+            <div className="text-white font-medium text-sm">Split Panel Joiner</div>
+            <div className="text-gray-500 text-xs">
+              M5 hex bolt with captive nut pocket
+            </div>
+          </div>
+
+          {/* Nut Side */}
+          <div className="mb-3">
+            <label className="block text-xs text-gray-400 mb-1">Nut Pocket Side</label>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setJoinerNutSide('left')}
+                className={`flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+                  (config.joinerNutSide || 'right') === 'left'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                }`}
+              >
+                Left Side
+              </button>
+              <button
+                onClick={() => setJoinerNutSide('right')}
+                className={`flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+                  (config.joinerNutSide || 'right') === 'right'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                }`}
+              >
+                Right Side
+              </button>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              The other side will have clearance holes for the screw head
+            </div>
+          </div>
+
+          {/* Nut Pocket Depth */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Nut Pocket Depth</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={config.joinerNutDepth || 4.5}
+                onChange={(e) => setJoinerNutDepth(Number(e.target.value))}
+                step={0.5}
+                min={2}
+                max={10}
+                className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+              />
+              <span className="text-xs text-gray-400">mm</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Standard M5 nut is 4mm thick. Default 4.5mm allows some clearance.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Selected Device Properties */}
-      {selectedDevice && dims && (
+      {selectedDevice && dims && !joinerSelected && (
         <div className="p-3 border-b border-gray-700">
           <h3 className="text-sm font-medium text-gray-300 mb-3">Device Properties</h3>
 
@@ -251,9 +350,9 @@ export function PropertyPanel() {
       )}
 
       {/* Empty state when no device selected */}
-      {!selectedDevice && allPlacedDevices.length > 0 && (
+      {!selectedDevice && !joinerSelected && (allPlacedDevices.length > 0 || config.isSplit) && (
         <div className="p-3 text-gray-500 text-xs text-center">
-          Select a device to edit its properties
+          Select {config.isSplit ? 'the joiner or a device' : 'a device'} to edit its properties
         </div>
       )}
     </div>
