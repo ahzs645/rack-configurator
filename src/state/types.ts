@@ -68,6 +68,21 @@ export const JOINER_NUT_SIDE_LABELS: Record<JoinerNutSide, string> = {
   right: 'Right Side',
 };
 
+// Joiner screw type options
+export type JoinerScrewType = 'M3' | 'M4' | 'M5' | 'M6' | '4-40' | '6-32' | '8-32' | '10-24' | '1/4-20';
+
+export const JOINER_SCREW_TYPE_LABELS: Record<JoinerScrewType, string> = {
+  'M3': 'M3 (Metric)',
+  'M4': 'M4 (Metric)',
+  'M5': 'M5 (Metric)',
+  'M6': 'M6 (Metric)',
+  '4-40': '#4-40 (Imperial)',
+  '6-32': '#6-32 (Imperial)',
+  '8-32': '#8-32 (Imperial)',
+  '10-24': '#10-24 (Imperial)',
+  '1/4-20': '1/4-20 (Imperial)',
+};
+
 // Placed device on the rack
 export interface PlacedDevice {
   id: string;          // Unique instance ID
@@ -117,6 +132,7 @@ export interface RackConfig {
   // Joiner settings (for split panels)
   joinerNutSide: JoinerNutSide;
   joinerNutDepth: number;
+  joinerScrewType: JoinerScrewType;
 
   // Placed devices (for single piece or when isSplit=false)
   devices: PlacedDevice[];
@@ -170,6 +186,7 @@ export const DEFAULT_RACK_CONFIG: RackConfig = {
   renderMode: 'single',
   joinerNutSide: 'right',
   joinerNutDepth: 4.5,
+  joinerScrewType: 'M5',
   devices: [],
   leftDevices: [],
   rightDevices: [],

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRackStore } from '../state/rack-store';
-import type { MountType, PlacedDevice, BackStyle, JoinerNutSide } from '../state/types';
-import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_NUT_SIDE_LABELS } from '../state/types';
+import type { MountType, PlacedDevice, BackStyle, JoinerScrewType } from '../state/types';
+import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_SCREW_TYPE_LABELS } from '../state/types';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 
 // Placed device list item
@@ -66,10 +66,12 @@ export function PropertyPanel() {
     updateDevicePosition,
     updateDeviceMountType,
     updateDeviceBackStyle,
+    updateDeviceDimensions,
     removeDevice,
     moveDeviceToSide,
     setJoinerNutSide,
     setJoinerNutDepth,
+    setJoinerScrewType,
   } = useRackStore();
 
   // Get all placed devices with their side info
@@ -150,7 +152,7 @@ export function PropertyPanel() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-white font-medium">Split Joiner</div>
                     <div className="text-xs text-gray-400">
-                      M5 bolt joint • Nut on {config.joinerNutSide || 'right'}
+                      {config.joinerScrewType || 'M5'} bolt joint • Nut on {config.joinerNutSide || 'right'}
                     </div>
                   </div>
                 </div>
@@ -182,8 +184,24 @@ export function PropertyPanel() {
           <div className="mb-3">
             <div className="text-white font-medium text-sm">Split Panel Joiner</div>
             <div className="text-gray-500 text-xs">
-              M5 hex bolt with captive nut pocket
+              Hex bolt with captive nut pocket
             </div>
+          </div>
+
+          {/* Screw Type */}
+          <div className="mb-3">
+            <label className="block text-xs text-gray-400 mb-1">Bolt Size</label>
+            <select
+              value={config.joinerScrewType || 'M5'}
+              onChange={(e) => setJoinerScrewType(e.target.value as JoinerScrewType)}
+              className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+            >
+              {Object.entries(JOINER_SCREW_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Nut Side */}
@@ -232,7 +250,7 @@ export function PropertyPanel() {
               <span className="text-xs text-gray-400">mm</span>
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Standard M5 nut is 4mm thick. Default 4.5mm allows some clearance.
+              Depth for the captive nut pocket. Set to 0 to use the default for the selected bolt size.
             </div>
           </div>
         </div>
@@ -247,9 +265,11 @@ export function PropertyPanel() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <div className="text-white font-medium text-sm">{dims.name}</div>
-              <div className="text-gray-500 text-xs">
-                {dims.width} x {dims.height} x {dims.depth} mm
-              </div>
+              {selectedDevice.deviceId !== 'custom' && (
+                <div className="text-gray-500 text-xs">
+                  {dims.width} x {dims.height} x {dims.depth} mm
+                </div>
+              )}
             </div>
             <button
               onClick={() => removeDevice(selectedDevice.id)}
@@ -258,6 +278,72 @@ export function PropertyPanel() {
               Remove
             </button>
           </div>
+
+          {/* Custom device dimensions (editable) */}
+          {selectedDevice.deviceId === 'custom' && (
+            <div className="mb-3">
+              <label className="block text-xs text-gray-400 mb-1">Dimensions (mm)</label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-0.5">Width</label>
+                  <input
+                    type="number"
+                    value={selectedDevice.customWidth || 100}
+                    onChange={(e) => {
+                      const width = parseFloat(e.target.value) || 1;
+                      updateDeviceDimensions(
+                        selectedDevice.id,
+                        width,
+                        selectedDevice.customHeight || 40,
+                        selectedDevice.customDepth || 100
+                      );
+                    }}
+                    step={1}
+                    min={1}
+                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-0.5">Height</label>
+                  <input
+                    type="number"
+                    value={selectedDevice.customHeight || 40}
+                    onChange={(e) => {
+                      const height = parseFloat(e.target.value) || 1;
+                      updateDeviceDimensions(
+                        selectedDevice.id,
+                        selectedDevice.customWidth || 100,
+                        height,
+                        selectedDevice.customDepth || 100
+                      );
+                    }}
+                    step={1}
+                    min={1}
+                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-0.5">Depth</label>
+                  <input
+                    type="number"
+                    value={selectedDevice.customDepth || 100}
+                    onChange={(e) => {
+                      const depth = parseFloat(e.target.value) || 1;
+                      updateDeviceDimensions(
+                        selectedDevice.id,
+                        selectedDevice.customWidth || 100,
+                        selectedDevice.customHeight || 40,
+                        depth
+                      );
+                    }}
+                    step={1}
+                    min={1}
+                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Split side selector (only in split mode) */}
           {config.isSplit && (

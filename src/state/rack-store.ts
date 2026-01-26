@@ -9,6 +9,7 @@ import type {
   VentType,
   RenderMode,
   JoinerNutSide,
+  JoinerScrewType,
 } from './types';
 import { DEFAULT_RACK_CONFIG } from './types';
 
@@ -55,6 +56,7 @@ interface RackStore {
   setRenderMode: (mode: RenderMode) => void;
   setJoinerNutSide: (side: JoinerNutSide) => void;
   setJoinerNutDepth: (depth: number) => void;
+  setJoinerScrewType: (screwType: JoinerScrewType) => void;
 
   // Actions - Device management
   addDevice: (deviceId: string, offsetX?: number, offsetY?: number, mountType?: MountType, side?: 'left' | 'right') => string;
@@ -63,6 +65,7 @@ interface RackStore {
   updateDevicePosition: (id: string, offsetX: number, offsetY: number) => void;
   updateDeviceMountType: (id: string, mountType: MountType) => void;
   updateDeviceBackStyle: (id: string, backStyle: BackStyle) => void;
+  updateDeviceDimensions: (id: string, width: number, height: number, depth: number) => void;
   moveDeviceToSide: (id: string, side: 'left' | 'right' | 'main') => void;
   selectDevice: (id: string | null) => void;
   clearDevices: () => void;
@@ -273,6 +276,11 @@ export const useRackStore = create<RackStore>((set, get) => ({
       config: { ...state.config, joinerNutDepth },
     })),
 
+  setJoinerScrewType: (joinerScrewType) =>
+    set((state) => ({
+      config: { ...state.config, joinerScrewType },
+    })),
+
   // Device management
   addDevice: (deviceId, offsetX = 0, offsetY = 0, mountType = 'cage', side) => {
     const id = generateId();
@@ -453,6 +461,28 @@ export const useRackStore = create<RackStore>((set, get) => ({
         ),
         rightDevices: state.config.rightDevices.map((d) =>
           d.id === id ? { ...d, backStyle } : d
+        ),
+      },
+    })),
+
+  updateDeviceDimensions: (id, width, height, depth) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id && d.deviceId === 'custom'
+            ? { ...d, customWidth: width, customHeight: height, customDepth: depth }
+            : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id && d.deviceId === 'custom'
+            ? { ...d, customWidth: width, customHeight: height, customDepth: depth }
+            : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id && d.deviceId === 'custom'
+            ? { ...d, customWidth: width, customHeight: height, customDepth: depth }
+            : d
         ),
       },
     })),

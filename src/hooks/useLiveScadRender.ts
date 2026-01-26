@@ -34,6 +34,7 @@ function getConfigHash(config: RackConfig): string {
     renderMode: config.renderMode,
     joinerNutSide: config.joinerNutSide,
     joinerNutDepth: config.joinerNutDepth,
+    joinerScrewType: config.joinerScrewType,
     devices: config.devices,
     leftDevices: config.leftDevices,
     rightDevices: config.rightDevices,
