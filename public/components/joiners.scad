@@ -82,16 +82,68 @@ _MIN_INNER_FLOOR = 1.0;
 _EIA_UNIT_HEIGHT = 44.45;      // 1U = 44.45mm
 _EIA_PANEL_HEIGHT = 43.66;     // Panel height (1U minus clearance)
 
-// Wall/plate dimensions - THIN profile
-_WALL_THICKNESS = 4;           // Thickness of the vertical wall
-_WALL_HEIGHT = 15;             // Height of wall above faceplate
+// Base wall/plate dimensions - will be scaled up for larger bolts
+_BASE_WALL_THICKNESS = 4;      // Base thickness of the vertical wall
+_BASE_WALL_HEIGHT = 15;        // Base height of wall above faceplate
 _WALL_ROUNDING = 1.5;          // Top edge rounding
 _FACEPLATE_THICKNESS = 4;      // Default faceplate thickness
 
-// Triangle screw pattern
-_SCREW_TOP_SPREAD = 12;        // Horizontal spread of top 2 screws
-_SCREW_TOP_HEIGHT = 10;        // Height of top screws from faceplate
-_SCREW_BOTTOM_HEIGHT = 4;      // Height of bottom screw from faceplate
+// Legacy constants (for backwards compatibility)
+_WALL_THICKNESS = _BASE_WALL_THICKNESS;
+_WALL_HEIGHT = _BASE_WALL_HEIGHT;
+
+// Triangle screw pattern - base values, will be scaled for larger bolts
+_BASE_SCREW_TOP_SPREAD = 12;   // Horizontal spread of top 2 screws
+_BASE_SCREW_TOP_HEIGHT = 10;   // Height of top screws from faceplate
+_BASE_SCREW_BOTTOM_HEIGHT = 4; // Height of bottom screw from faceplate
+
+// Legacy constants
+_SCREW_TOP_SPREAD = _BASE_SCREW_TOP_SPREAD;
+_SCREW_TOP_HEIGHT = _BASE_SCREW_TOP_HEIGHT;
+_SCREW_BOTTOM_HEIGHT = _BASE_SCREW_BOTTOM_HEIGHT;
+
+// Calculate wall thickness needed for a given screw type
+// Wall must fit: nut_floor + nut_pocket_depth + inner_floor
+function joiner_wall_thickness(screw_type, nut_floor = 0) =
+    let(
+        nut_depth = joiner_default_depth(screw_type),
+        min_thickness = nut_floor + nut_depth + _MIN_INNER_FLOOR + 0.5
+    )
+    max(_BASE_WALL_THICKNESS, min_thickness);
+
+// Calculate wall height needed for a given screw type
+// Wall must have enough material around screw holes
+function joiner_wall_height(screw_type) =
+    let(
+        clearance_dia = joiner_clearance_dia(screw_type),
+        // Need at least 2mm of material above the top screw hole
+        min_height = _BASE_SCREW_TOP_HEIGHT + clearance_dia/2 + 2
+    )
+    max(_BASE_WALL_HEIGHT, min_height);
+
+// Calculate screw spread based on nut size (so nuts don't overlap)
+function joiner_screw_spread(screw_type) =
+    let(
+        nut_af = joiner_nut_af(screw_type),
+        // Minimum spread is nut across-corners + 2mm clearance between nuts
+        nut_across_corners = nut_af / cos(30),
+        min_spread = nut_across_corners + 3
+    )
+    max(_BASE_SCREW_TOP_SPREAD, min_spread);
+
+// Calculate screw heights based on wall height and screw size
+function joiner_screw_top_height(screw_type) =
+    let(
+        wall_h = joiner_wall_height(screw_type),
+        clearance_dia = joiner_clearance_dia(screw_type)
+    )
+    wall_h - clearance_dia/2 - 2;
+
+function joiner_screw_bottom_height(screw_type) =
+    let(
+        clearance_dia = joiner_clearance_dia(screw_type)
+    )
+    max(_BASE_SCREW_BOTTOM_HEIGHT, clearance_dia/2 + 2);
 
 
 // ============================================================================
@@ -101,12 +153,17 @@ _SCREW_BOTTOM_HEIGHT = 4;      // Height of bottom screw from faceplate
 /**
  * Calculate screw positions for triangle pattern (2 top, 1 bottom)
  * Returns array of [y_position, z_height_above_faceplate]
+ * @param screw_type - screw size to calculate proper spacing
  */
-function get_triangle_screw_positions(unit_height, top_spread = _SCREW_TOP_SPREAD) =
+function get_triangle_screw_positions(unit_height, screw_type = "M5") =
     let(
         panel_height = unit_height * _EIA_PANEL_HEIGHT,
         groups = unit_height,
         group_height = panel_height / groups,
+        // Use dynamic spread and heights based on screw type
+        top_spread = joiner_screw_spread(screw_type),
+        top_height = joiner_screw_top_height(screw_type),
+        bottom_height = joiner_screw_bottom_height(screw_type),
         positions = [
             for (g = [0 : groups - 1])
                 let(
@@ -114,10 +171,10 @@ function get_triangle_screw_positions(unit_height, top_spread = _SCREW_TOP_SPREA
                 )
                 each [
                     // Two top screws (spread apart)
-                    [group_center_y - top_spread/2, _SCREW_TOP_HEIGHT],
-                    [group_center_y + top_spread/2, _SCREW_TOP_HEIGHT],
+                    [group_center_y - top_spread/2, top_height],
+                    [group_center_y + top_spread/2, top_height],
                     // One bottom screw (centered)
-                    [group_center_y, _SCREW_BOTTOM_HEIGHT]
+                    [group_center_y, bottom_height]
                 ]
         ]
     )
@@ -195,8 +252,8 @@ module faceplate_joiner_left(
     unit_height = 1,
     faceplate_width = 60,
     faceplate_thickness = _FACEPLATE_THICKNESS,
-    wall_thickness = _WALL_THICKNESS,
-    wall_height = _WALL_HEIGHT,
+    wall_thickness = 0,  // 0 = auto based on screw type
+    wall_height = 0,     // 0 = auto based on screw type
     rounding = _WALL_ROUNDING,
     include_faceplate = true,
     nut_side = "right",
@@ -206,13 +263,19 @@ module faceplate_joiner_left(
     fn = 32
 ) {
     panel_height = unit_height * _EIA_PANEL_HEIGHT;
-    screw_positions = get_triangle_screw_positions(unit_height);
     has_nut = (nut_side == "left");
 
-    // Get dimensions based on screw type
+    // Get dimensions based on screw type (auto-size if not specified)
     clearance_dia = joiner_clearance_dia(screw_type);
     nut_af = joiner_nut_af(screw_type);
     pocket_depth = (nut_pocket_depth > 0) ? nut_pocket_depth : joiner_default_depth(screw_type);
+
+    // Calculate wall dimensions based on screw type
+    actual_wall_thickness = (wall_thickness > 0) ? wall_thickness : joiner_wall_thickness(screw_type, nut_floor);
+    actual_wall_height = (wall_height > 0) ? wall_height : joiner_wall_height(screw_type);
+
+    // Get screw positions with proper spacing for this screw type
+    screw_positions = get_triangle_screw_positions(unit_height, screw_type);
 
     difference() {
         union() {
@@ -223,11 +286,11 @@ module faceplate_joiner_left(
             }
 
             // Thin vertical wall at the joint edge (x=0)
-            translate([-wall_thickness, 0, faceplate_thickness])
+            translate([-actual_wall_thickness, 0, faceplate_thickness])
                 joiner_wall(
                     unit_height = unit_height,
-                    wall_thickness = wall_thickness,
-                    wall_height = wall_height,
+                    wall_thickness = actual_wall_thickness,
+                    wall_height = actual_wall_height,
                     rounding = rounding,
                     fn = fn
                 );
@@ -240,9 +303,9 @@ module faceplate_joiner_left(
             screw_z = faceplate_thickness + z_height;
 
             // Through hole for bolt (smaller diameter, goes all the way through)
-            translate([-wall_thickness/2, y_pos, screw_z])
+            translate([-actual_wall_thickness/2, y_pos, screw_z])
                 rotate([0, 90, 0])
-                    cylinder(h = wall_thickness + 2, d = clearance_dia, center = true, $fn = fn);
+                    cylinder(h = actual_wall_thickness + 2, d = clearance_dia, center = true, $fn = fn);
 
             // Hex nut pocket (if this side has nuts)
             if (has_nut) {
@@ -251,12 +314,12 @@ module faceplate_joiner_left(
                 // 2. inner_floor - mandatory floor on mating face for nut to pull against
                 //
                 // Limit pocket depth so it doesn't cut through the inner floor
-                max_pocket_depth = wall_thickness - nut_floor - _MIN_INNER_FLOOR;
+                max_pocket_depth = actual_wall_thickness - nut_floor - _MIN_INNER_FLOOR;
                 actual_pocket_depth = min(pocket_depth, max_pocket_depth);
 
                 // Hexagonal pocket for nut
                 // Starts at outer face + nut_floor, extends inward but stops before inner floor
-                translate([-wall_thickness + nut_floor, y_pos, screw_z])
+                translate([-actual_wall_thickness + nut_floor, y_pos, screw_z])
                     rotate([0, 90, 0])
                         rotate([0, 0, 30])
                             linear_extrude(height = actual_pocket_depth + 0.1)
@@ -279,8 +342,8 @@ module faceplate_joiner_right(
     unit_height = 1,
     faceplate_width = 60,
     faceplate_thickness = _FACEPLATE_THICKNESS,
-    wall_thickness = _WALL_THICKNESS,
-    wall_height = _WALL_HEIGHT,
+    wall_thickness = 0,  // 0 = auto based on screw type
+    wall_height = 0,     // 0 = auto based on screw type
     rounding = _WALL_ROUNDING,
     include_faceplate = true,
     nut_side = "right",
@@ -290,13 +353,19 @@ module faceplate_joiner_right(
     fn = 32
 ) {
     panel_height = unit_height * _EIA_PANEL_HEIGHT;
-    screw_positions = get_triangle_screw_positions(unit_height);
     has_nut = (nut_side == "right");
 
-    // Get dimensions based on screw type
+    // Get dimensions based on screw type (auto-size if not specified)
     clearance_dia = joiner_clearance_dia(screw_type);
     nut_af = joiner_nut_af(screw_type);
     pocket_depth = (nut_pocket_depth > 0) ? nut_pocket_depth : joiner_default_depth(screw_type);
+
+    // Calculate wall dimensions based on screw type
+    actual_wall_thickness = (wall_thickness > 0) ? wall_thickness : joiner_wall_thickness(screw_type, nut_floor);
+    actual_wall_height = (wall_height > 0) ? wall_height : joiner_wall_height(screw_type);
+
+    // Get screw positions with proper spacing for this screw type
+    screw_positions = get_triangle_screw_positions(unit_height, screw_type);
 
     difference() {
         union() {
@@ -310,8 +379,8 @@ module faceplate_joiner_right(
             translate([0, 0, faceplate_thickness])
                 joiner_wall(
                     unit_height = unit_height,
-                    wall_thickness = wall_thickness,
-                    wall_height = wall_height,
+                    wall_thickness = actual_wall_thickness,
+                    wall_height = actual_wall_height,
                     rounding = rounding,
                     fn = fn
                 );
@@ -324,9 +393,9 @@ module faceplate_joiner_right(
             screw_z = faceplate_thickness + z_height;
 
             // Through hole for bolt (smaller diameter, goes all the way through)
-            translate([wall_thickness/2, y_pos, screw_z])
+            translate([actual_wall_thickness/2, y_pos, screw_z])
                 rotate([0, 90, 0])
-                    cylinder(h = wall_thickness + 2, d = clearance_dia, center = true, $fn = fn);
+                    cylinder(h = actual_wall_thickness + 2, d = clearance_dia, center = true, $fn = fn);
 
             // Hex nut pocket (if this side has nuts)
             if (has_nut) {
@@ -335,11 +404,11 @@ module faceplate_joiner_right(
                 // 2. inner_floor - mandatory floor on mating face for nut to pull against
                 //
                 // Limit pocket depth so it doesn't cut through the inner floor
-                max_pocket_depth = wall_thickness - nut_floor - _MIN_INNER_FLOOR;
+                max_pocket_depth = actual_wall_thickness - nut_floor - _MIN_INNER_FLOOR;
                 actual_pocket_depth = min(pocket_depth, max_pocket_depth);
 
                 // Hexagonal pocket for nut
-                // For right side: outer face is at x=wall_thickness
+                // For right side: outer face is at x=actual_wall_thickness
                 // Pocket starts inward from outer face, leaving inner floor at x=0
                 translate([_MIN_INNER_FLOOR, y_pos, screw_z])
                     rotate([0, 90, 0])
