@@ -58,6 +58,11 @@ _RG_WALL = 3;  // Default wall thickness
 
 _RG_EPS = 0.01;
 
+// Toolless hook dimensions (must match rack_ears.scad)
+// These are duplicated here because `use` doesn't import variables
+HOOK_HEIGHT = 30.4;      // Total height of hook profile (Y range 2.25 to 32.65)
+HOOK_SPACING = 47.625;   // Standard rack hole spacing (1.875" = 3/16 of 10")
+
 // ============================================================================
 // DEVICE CONFIGURATION HELPERS
 // ============================================================================
