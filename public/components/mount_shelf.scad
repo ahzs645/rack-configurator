@@ -216,8 +216,8 @@ module storage_tray_positioned(
     // Use device_h for positioning if provided, otherwise use wall_height
     y_offset = device_h > 0 ? device_h/2 : wall_height/2;
 
-    translate([offset_x - width/2, offset_y - y_offset, plate_thick])
-    mirror([0, 0, 1]) {
+    translate([offset_x - width/2, offset_y + y_offset, 0])
+    mirror([0, 1, 0]) {
         difference() {
             // Outer shell (extends in -Z for depth into rack, Y for height)
             cube([width, base_thickness + wall_height, depth]);

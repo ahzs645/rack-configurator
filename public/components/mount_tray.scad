@@ -135,8 +135,8 @@ module tray_mount_positioned(
     actual_depth = device_d + 5;
     actual_lip = lip_height > 0 ? lip_height : device_h * 0.3;
 
-    translate([offset_x - tray_w/2 - wall, offset_y - device_h/2, plate_thick])
-    mirror([0, 0, 1]) {
+    translate([offset_x - tray_w/2 - wall, offset_y + device_h/2, 0])
+    mirror([0, 1, 0]) {
         // Base tray floor (extends in -Z for depth into rack)
         cube([tray_w + 2*wall, wall, actual_depth]);
 
