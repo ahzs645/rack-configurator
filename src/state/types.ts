@@ -145,8 +145,13 @@ export interface PlacedDevice {
   shelfScrewHoles?: number;         // Number of screw holes (0-5, default: 0)
   shelfCableHolesLeft?: number;     // Left cable routing holes (0-5, default: 0)
   shelfCableHolesRight?: number;    // Right cable routing holes (0-5, default: 0)
+  shelfPullHandle?: boolean;        // Add pull handle at front (default: false)
   // Mounting points/standoffs (can be used on multiple mount types)
   standoffs?: StandoffConfig[];     // Array of standoff configurations
+  standoffCountersink?: boolean;    // Countersunk screw holes (default: false)
+  standoffReinforced?: boolean;     // Reinforced bases with cones (default: false)
+  // PCB preset for auto-generating 4-corner standoffs
+  pcbPreset?: PCBPresetConfig;      // Auto-generate standoffs from PCB dimensions
 }
 
 // Standoff/mounting point configuration
@@ -156,6 +161,18 @@ export interface StandoffConfig {
   height: number;     // Standoff height (mm)
   outerDia: number;   // Outer diameter (mm)
   holeDia: number;    // Hole diameter (mm)
+}
+
+// PCB preset for auto-generating 4-corner standoffs
+export interface PCBPresetConfig {
+  enabled: boolean;       // Use PCB preset
+  pcbWidth: number;       // PCB hole-to-hole width (mm)
+  pcbLength: number;      // PCB hole-to-hole length (mm)
+  offsetX: number;        // X offset from shelf center (mm)
+  offsetY: number;        // Y offset from shelf center (mm)
+  height: number;         // Standoff height (mm)
+  outerDia: number;       // Outer diameter (mm)
+  holeDia: number;        // Hole diameter (mm)
 }
 
 // Full rack configuration

@@ -440,6 +440,10 @@ module _rg_device_mount(
             cable_hole_dia = 8,
             top_support_depth = 20,
             standoffs = _shelf_standoffs(shelf_params),
+            standoff_countersink = _shelf_standoff_countersink(shelf_params),
+            standoff_reinforced = _shelf_standoff_reinforced(shelf_params),
+            pull_handle = _shelf_pull_handle(shelf_params),
+            pcb_preset = _shelf_pcb_preset(shelf_params),
             plate_thick = plate_thick
         );
     }

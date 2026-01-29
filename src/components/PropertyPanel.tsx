@@ -140,8 +140,12 @@ export function PropertyPanel() {
     updateDeviceShelfNotchWidth,
     updateDeviceShelfScrewHoles,
     updateDeviceShelfCableHoles,
+    updateDeviceShelfPullHandle,
     addDeviceStandoff,
     removeDeviceStandoff,
+    updateDeviceStandoffCountersink,
+    updateDeviceStandoffReinforced,
+    updateDevicePCBPreset,
     removeDevice,
     moveDeviceToSide,
     setJoinerType,
@@ -684,6 +688,17 @@ export function PropertyPanel() {
                 <span className="text-xs text-gray-300 w-4 text-center">{selectedDevice.shelfCableHolesRight || 0}</span>
               </div>
 
+              {/* Pull Handle Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer mt-2">
+                <input
+                  type="checkbox"
+                  checked={selectedDevice.shelfPullHandle === true}
+                  onChange={(e) => updateDeviceShelfPullHandle(selectedDevice.id, e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800"
+                />
+                <span className="text-xs text-gray-300">Pull Handle</span>
+              </label>
+
               {/* Standoffs/Mounting Points */}
               <div className="border-t border-gray-600 pt-2 mt-2">
                 <div className="flex items-center justify-between mb-2">
@@ -700,6 +715,28 @@ export function PropertyPanel() {
                   >
                     + Add
                   </button>
+                </div>
+
+                {/* Standoff Options */}
+                <div className="flex gap-3 mb-2">
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedDevice.standoffCountersink === true}
+                      onChange={(e) => updateDeviceStandoffCountersink(selectedDevice.id, e.target.checked)}
+                      className="w-3 h-3 rounded border-gray-600 bg-gray-700 text-blue-500"
+                    />
+                    <span className="text-xs text-gray-400">Countersunk</span>
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedDevice.standoffReinforced === true}
+                      onChange={(e) => updateDeviceStandoffReinforced(selectedDevice.id, e.target.checked)}
+                      className="w-3 h-3 rounded border-gray-600 bg-gray-700 text-blue-500"
+                    />
+                    <span className="text-xs text-gray-400">Reinforced</span>
+                  </label>
                 </div>
                 {(selectedDevice.standoffs || []).length === 0 && (
                   <div className="text-xs text-gray-500 text-center py-1">
@@ -776,6 +813,119 @@ export function PropertyPanel() {
                     </div>
                   </div>
                 ))}
+
+                {/* PCB Preset - 4-corner standoffs */}
+                <div className="border-t border-gray-600 pt-2 mt-2">
+                  <label className="flex items-center gap-2 cursor-pointer mb-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedDevice.pcbPreset?.enabled === true}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          updateDevicePCBPreset(selectedDevice.id, {
+                            enabled: true,
+                            pcbWidth: 49,
+                            pcbLength: 58,
+                            offsetX: 0,
+                            offsetY: 0,
+                            height: 3,
+                            outerDia: 6,
+                            holeDia: 2.5
+                          });
+                        } else {
+                          updateDevicePCBPreset(selectedDevice.id, undefined);
+                        }
+                      }}
+                      className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-700 text-blue-500"
+                    />
+                    <span className="text-xs text-gray-300">PCB Preset (4-corner)</span>
+                  </label>
+
+                  {selectedDevice.pcbPreset?.enabled && (
+                    <div className="bg-gray-700 rounded p-2 space-y-1">
+                      <div className="grid grid-cols-2 gap-1 text-xs">
+                        <div>
+                          <label className="text-gray-500">PCB Width</label>
+                          <input
+                            type="number"
+                            value={selectedDevice.pcbPreset.pcbWidth}
+                            onChange={(e) => updateDevicePCBPreset(selectedDevice.id, {
+                              ...selectedDevice.pcbPreset!,
+                              pcbWidth: parseFloat(e.target.value) || 49
+                            })}
+                            className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500">PCB Length</label>
+                          <input
+                            type="number"
+                            value={selectedDevice.pcbPreset.pcbLength}
+                            onChange={(e) => updateDevicePCBPreset(selectedDevice.id, {
+                              ...selectedDevice.pcbPreset!,
+                              pcbLength: parseFloat(e.target.value) || 58
+                            })}
+                            className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500">Offset X</label>
+                          <input
+                            type="number"
+                            value={selectedDevice.pcbPreset.offsetX}
+                            onChange={(e) => updateDevicePCBPreset(selectedDevice.id, {
+                              ...selectedDevice.pcbPreset!,
+                              offsetX: parseFloat(e.target.value) || 0
+                            })}
+                            className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500">Offset Y</label>
+                          <input
+                            type="number"
+                            value={selectedDevice.pcbPreset.offsetY}
+                            onChange={(e) => updateDevicePCBPreset(selectedDevice.id, {
+                              ...selectedDevice.pcbPreset!,
+                              offsetY: parseFloat(e.target.value) || 0
+                            })}
+                            className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500">Height</label>
+                          <input
+                            type="number"
+                            value={selectedDevice.pcbPreset.height}
+                            onChange={(e) => updateDevicePCBPreset(selectedDevice.id, {
+                              ...selectedDevice.pcbPreset!,
+                              height: parseFloat(e.target.value) || 3
+                            })}
+                            className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                            min={1}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500">Hole Ø</label>
+                          <input
+                            type="number"
+                            value={selectedDevice.pcbPreset.holeDia}
+                            onChange={(e) => updateDevicePCBPreset(selectedDevice.id, {
+                              ...selectedDevice.pcbPreset!,
+                              holeDia: parseFloat(e.target.value) || 2.5
+                            })}
+                            className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                            min={1}
+                            step={0.5}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Creates 4 standoffs at PCB mounting hole positions
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

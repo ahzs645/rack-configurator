@@ -13,6 +13,7 @@ import type {
   JoinerScrewType,
   ShelfNotch,
   StandoffConfig,
+  PCBPresetConfig,
 } from './types';
 import { DEFAULT_RACK_CONFIG, getToollessHookCount } from './types';
 
@@ -84,10 +85,14 @@ interface RackStore {
   updateDeviceShelfNotchWidth: (id: string, width: number) => void;
   updateDeviceShelfScrewHoles: (id: string, count: number) => void;
   updateDeviceShelfCableHoles: (id: string, left: number, right: number) => void;
+  updateDeviceShelfPullHandle: (id: string, pullHandle: boolean) => void;
   // Standoff updates (can be used on multiple mount types)
   updateDeviceStandoffs: (id: string, standoffs: StandoffConfig[]) => void;
   addDeviceStandoff: (id: string, standoff: StandoffConfig) => void;
   removeDeviceStandoff: (id: string, index: number) => void;
+  updateDeviceStandoffCountersink: (id: string, countersink: boolean) => void;
+  updateDeviceStandoffReinforced: (id: string, reinforced: boolean) => void;
+  updateDevicePCBPreset: (id: string, pcbPreset: PCBPresetConfig | undefined) => void;
   moveDeviceToSide: (id: string, side: 'left' | 'right' | 'main') => void;
   selectDevice: (id: string | null) => void;
   clearDevices: () => void;
@@ -725,6 +730,22 @@ export const useRackStore = create<RackStore>((set, get) => ({
       },
     })),
 
+  updateDeviceShelfPullHandle: (id, pullHandle) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, shelfPullHandle: pullHandle } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, shelfPullHandle: pullHandle } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, shelfPullHandle: pullHandle } : d
+        ),
+      },
+    })),
+
   // Standoff updates
   updateDeviceStandoffs: (id, standoffs) =>
     set((state) => ({
@@ -771,6 +792,54 @@ export const useRackStore = create<RackStore>((set, get) => ({
         },
       };
     }),
+
+  updateDeviceStandoffCountersink: (id, countersink) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, standoffCountersink: countersink } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, standoffCountersink: countersink } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, standoffCountersink: countersink } : d
+        ),
+      },
+    })),
+
+  updateDeviceStandoffReinforced: (id, reinforced) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, standoffReinforced: reinforced } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, standoffReinforced: reinforced } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, standoffReinforced: reinforced } : d
+        ),
+      },
+    })),
+
+  updateDevicePCBPreset: (id, pcbPreset) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, pcbPreset } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, pcbPreset } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, pcbPreset } : d
+        ),
+      },
+    })),
 
   moveDeviceToSide: (id, side) =>
     set((state) => {

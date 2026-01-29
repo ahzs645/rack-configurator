@@ -153,7 +153,8 @@ function generateDevicesArray(devices: PlacedDevice[]): string {
 
 /**
  * Generate shelf parameters array for OpenSCAD
- * Returns: [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight, solidBottom, standoffs]
+ * Returns: [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight,
+ *           solidBottom, standoffs, standoffCountersink, standoffReinforced, pullHandle, pcbPreset]
  */
 function generateShelfParams(device: PlacedDevice): string {
   const useHoneycomb = device.shelfUseHoneycomb !== false;  // Default true
@@ -170,7 +171,20 @@ function generateShelfParams(device: PlacedDevice): string {
     ? `[${standoffs.map(s => `[${s.x}, ${s.y}, ${s.height}, ${s.outerDia}, ${s.holeDia}]`).join(', ')}]`
     : '[]';
 
-  return `[${useHoneycomb}, "${notch}", ${notchWidth}, ${screwHoles}, ${cableHolesLeft}, ${cableHolesRight}, ${solidBottom}, ${standoffsStr}]`;
+  // Standoff options
+  const standoffCountersink = device.standoffCountersink === true;
+  const standoffReinforced = device.standoffReinforced === true;
+
+  // Pull handle
+  const pullHandle = device.shelfPullHandle === true;
+
+  // PCB preset: [enabled, pcbWidth, pcbLength, offsetX, offsetY, height, outerDia, holeDia]
+  const pcbPreset = device.pcbPreset;
+  const pcbPresetStr = pcbPreset?.enabled
+    ? `[true, ${pcbPreset.pcbWidth}, ${pcbPreset.pcbLength}, ${pcbPreset.offsetX}, ${pcbPreset.offsetY}, ${pcbPreset.height}, ${pcbPreset.outerDia}, ${pcbPreset.holeDia}]`
+    : '[]';
+
+  return `[${useHoneycomb}, "${notch}", ${notchWidth}, ${screwHoles}, ${cableHolesLeft}, ${cableHolesRight}, ${solidBottom}, ${standoffsStr}, ${standoffCountersink}, ${standoffReinforced}, ${pullHandle}, ${pcbPresetStr}]`;
 }
 
 /**

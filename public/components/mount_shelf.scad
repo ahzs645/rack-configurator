@@ -283,7 +283,11 @@ module enhanced_shelf(
     cable_holes_right = 0,
     cable_hole_dia = 8,
     top_support_depth = 20,
-    standoffs = []  // Array of [x, y, height, outerDia, holeDia]
+    standoffs = [],           // Array of [x, y, height, outerDia, holeDia]
+    standoff_countersink = false,  // Countersunk screw holes
+    standoff_reinforced = false,   // Reinforced bases with cones
+    pull_handle = false,           // Add pull handle at front
+    pcb_preset = []           // [enabled, pcbWidth, pcbLength, offsetX, offsetY, height, outerDia, holeDia]
 ) {
     // Calculate derived dimensions
     // Keep screw holes centered on the original device width
@@ -392,21 +396,75 @@ module enhanced_shelf(
             // ============================================
             if (len(standoffs) > 0) {
                 for (s = standoffs) {
-                    // s = [x, y, height, outerDia, holeDia]
-                    s_x = s[0];
-                    s_y = s[1];
-                    s_height = s[2];
-                    s_outer = s[3];
-                    s_hole = s[4];
+                    _render_standoff(
+                        s[0], s[1], s[2], s[3], s[4],
+                        width, depth, thickness,
+                        standoff_countersink, standoff_reinforced
+                    );
+                }
+            }
 
-                    // Position relative to shelf center
-                    translate([width/2 + s_x, depth/2 + s_y, thickness]) {
-                        difference() {
-                            cylinder(h = s_height, d = s_outer, $fn = 24);
-                            translate([0, 0, -_MSH_EPS])
-                            cylinder(h = s_height + 2*_MSH_EPS, d = s_hole, $fn = 16);
-                        }
+            // ============================================
+            // PCB Preset - Auto-generate 4-corner standoffs
+            // pcb_preset = [enabled, pcbWidth, pcbLength, offsetX, offsetY, height, outerDia, holeDia]
+            // ============================================
+            if (len(pcb_preset) > 0 && pcb_preset[0] == true) {
+                _pcb_w = pcb_preset[1];
+                _pcb_l = pcb_preset[2];
+                _pcb_ox = pcb_preset[3];
+                _pcb_oy = pcb_preset[4];
+                _pcb_h = pcb_preset[5];
+                _pcb_outer = pcb_preset[6];
+                _pcb_hole = pcb_preset[7];
+
+                // Generate 4 corners
+                for (corner = [[0, 0], [_pcb_w, 0], [0, _pcb_l], [_pcb_w, _pcb_l]]) {
+                    _render_standoff(
+                        _pcb_ox - _pcb_w/2 + corner[0],
+                        _pcb_oy - _pcb_l/2 + corner[1],
+                        _pcb_h, _pcb_outer, _pcb_hole,
+                        width, depth, thickness,
+                        standoff_countersink, standoff_reinforced
+                    );
+                }
+            }
+
+            // ============================================
+            // Pull handle at front edge
+            // ============================================
+            if (pull_handle) {
+                _handle_width = min(width * 0.6, 80);
+                _handle_height = 8;
+                _handle_depth = 3;
+                _handle_curve_r = depth * 1.2;
+
+                translate([width/2 - _handle_width/2, -_handle_depth, 0]) {
+                    // Curved pull handle
+                    difference() {
+                        // Outer curve
+                        translate([_handle_width/2, _handle_curve_r + _handle_depth, 0])
+                        cylinder(h = thickness + _handle_height, r = _handle_curve_r, $fn = 120);
+
+                        // Inner curve (shell)
+                        translate([_handle_width/2, _handle_curve_r + _handle_depth - 2, -_MSH_EPS])
+                        cylinder(h = thickness + _handle_height + 2*_MSH_EPS, r = _handle_curve_r, $fn = 120);
+
+                        // Cut off sides
+                        translate([-_handle_curve_r - 1, -_handle_curve_r, -_MSH_EPS])
+                        cube([_handle_curve_r, 3*_handle_curve_r, thickness + _handle_height + 2*_MSH_EPS]);
+
+                        translate([_handle_width + 1, -_handle_curve_r, -_MSH_EPS])
+                        cube([_handle_curve_r, 3*_handle_curve_r, thickness + _handle_height + 2*_MSH_EPS]);
+
+                        // Cut off back
+                        translate([-1, _handle_depth + 2, -_MSH_EPS])
+                        cube([_handle_width + 2, _handle_curve_r * 2, thickness + _handle_height + 2*_MSH_EPS]);
                     }
+
+                    // Reinforce connection to shelf
+                    translate([0, _handle_depth - 0.5, thickness])
+                    rotate([-15, 0, 0])
+                    cube([_handle_width, 2, _handle_height * 0.7]);
                 }
             }
         }
@@ -480,6 +538,42 @@ function _get_shelf_screw_positions(width, depth, count, margin) =
                   [margin + 15, depth * 0.75], [width - 15, depth * 0.75]] :
     [];
 
+// Helper: Render a single standoff with optional countersink and reinforcement
+module _render_standoff(
+    s_x, s_y, s_height, s_outer, s_hole,
+    shelf_width, shelf_depth, shelf_thickness,
+    countersink = false, reinforced = false
+) {
+    // Countersink dimensions
+    cs_depth = 2;
+    cs_dia = s_hole * 2;
+
+    // Position relative to shelf center
+    translate([shelf_width/2 + s_x, shelf_depth/2 + s_y, shelf_thickness]) {
+        difference() {
+            union() {
+                // Main standoff cylinder
+                cylinder(h = s_height, d = s_outer, $fn = 24);
+
+                // Reinforced base cone (if enabled)
+                if (reinforced) {
+                    cylinder(h = min(s_height * 0.4, 3), d1 = s_outer + 2, d2 = s_outer, $fn = 24);
+                }
+            }
+
+            // Screw hole
+            translate([0, 0, -_MSH_EPS])
+            cylinder(h = s_height + 2*_MSH_EPS, d = s_hole, $fn = 16);
+
+            // Countersink recess for screw head (at top of standoff)
+            if (countersink) {
+                translate([0, 0, s_height - cs_depth])
+                cylinder(h = cs_depth + _MSH_EPS, d = cs_dia, $fn = 24);
+            }
+        }
+    }
+}
+
 // Helper: Create rectangular vent slots for non-honeycomb mode
 module _shelf_rect_vent_base(width, depth, thickness) {
     slot_length = 40;
@@ -531,6 +625,10 @@ module enhanced_shelf_positioned(
     cable_hole_dia = 8,
     top_support_depth = 20,
     standoffs = [],
+    standoff_countersink = false,
+    standoff_reinforced = false,
+    pull_handle = false,
+    pcb_preset = [],
     plate_thick = 4
 ) {
     // Position shelf so the platform is at the bottom of the cutout
@@ -557,6 +655,10 @@ module enhanced_shelf_positioned(
         cable_holes_right = cable_holes_right,
         cable_hole_dia = cable_hole_dia,
         top_support_depth = top_support_depth,
-        standoffs = standoffs
+        standoffs = standoffs,
+        standoff_countersink = standoff_countersink,
+        standoff_reinforced = standoff_reinforced,
+        pull_handle = pull_handle,
+        pcb_preset = pcb_preset
     );
 }
