@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRackStore } from '../state/rack-store';
-import type { MountType, PlacedDevice, BackStyle, JoinerScrewType, JoinerType } from '../state/types';
-import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_SCREW_TYPE_LABELS, JOINER_TYPE_LABELS } from '../state/types';
+import type { MountType, PlacedDevice, BackStyle, JoinerScrewType, JoinerType, ShelfNotch } from '../state/types';
+import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_SCREW_TYPE_LABELS, JOINER_TYPE_LABELS, SHELF_NOTCH_LABELS } from '../state/types';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 
 // Separate component for patch panel ports input to handle local state properly
@@ -133,6 +133,11 @@ export function PropertyPanel() {
     updateDeviceBackStyle,
     updateDeviceDimensions,
     updateDevicePatchPanelPorts,
+    updateDeviceShelfHoneycomb,
+    updateDeviceShelfNotch,
+    updateDeviceShelfNotchWidth,
+    updateDeviceShelfScrewHoles,
+    updateDeviceShelfCableHoles,
     removeDevice,
     moveDeviceToSide,
     setJoinerType,
@@ -553,6 +558,103 @@ export function PropertyPanel() {
               currentPorts={selectedDevice.patchPanelPorts || 6}
               onUpdate={updateDevicePatchPanelPorts}
             />
+          )}
+
+          {/* Shelf Options (only for shelf mount type) */}
+          {selectedDevice.mountType === 'shelf' && (
+            <div className="space-y-2 border-t border-gray-700 pt-2 mt-2">
+              <div className="text-xs font-medium text-gray-400">Shelf Options</div>
+
+              {/* Honeycomb Pattern Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedDevice.shelfUseHoneycomb !== false}
+                  onChange={(e) => updateDeviceShelfHoneycomb(selectedDevice.id, e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800"
+                />
+                <span className="text-xs text-gray-300">Honeycomb Pattern</span>
+              </label>
+
+              {/* LED Notch Position */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-400 w-16">LED Notch</label>
+                <select
+                  value={selectedDevice.shelfNotch || 'none'}
+                  onChange={(e) => updateDeviceShelfNotch(selectedDevice.id, e.target.value as ShelfNotch)}
+                  className="flex-1 bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600 focus:border-blue-500"
+                >
+                  {Object.entries(SHELF_NOTCH_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Notch Width (only show if notch is not 'none') */}
+              {selectedDevice.shelfNotch && selectedDevice.shelfNotch !== 'none' && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-400 w-16">Width</label>
+                  <input
+                    type="number"
+                    value={selectedDevice.shelfNotchWidth || 100}
+                    onChange={(e) => updateDeviceShelfNotchWidth(selectedDevice.id, parseInt(e.target.value) || 100)}
+                    className="flex-1 bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600 focus:border-blue-500"
+                    min={20}
+                    max={200}
+                  />
+                  <span className="text-xs text-gray-500">mm</span>
+                </div>
+              )}
+
+              {/* Screw Holes */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-400 w-16">Screws</label>
+                <input
+                  type="range"
+                  value={selectedDevice.shelfScrewHoles || 0}
+                  onChange={(e) => updateDeviceShelfScrewHoles(selectedDevice.id, parseInt(e.target.value))}
+                  className="flex-1"
+                  min={0}
+                  max={5}
+                />
+                <span className="text-xs text-gray-300 w-4 text-center">{selectedDevice.shelfScrewHoles || 0}</span>
+              </div>
+
+              {/* Cable Holes */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-400 w-16">Cables L</label>
+                <input
+                  type="range"
+                  value={selectedDevice.shelfCableHolesLeft || 0}
+                  onChange={(e) => updateDeviceShelfCableHoles(
+                    selectedDevice.id,
+                    parseInt(e.target.value),
+                    selectedDevice.shelfCableHolesRight || 0
+                  )}
+                  className="flex-1"
+                  min={0}
+                  max={5}
+                />
+                <span className="text-xs text-gray-300 w-4 text-center">{selectedDevice.shelfCableHolesLeft || 0}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-400 w-16">Cables R</label>
+                <input
+                  type="range"
+                  value={selectedDevice.shelfCableHolesRight || 0}
+                  onChange={(e) => updateDeviceShelfCableHoles(
+                    selectedDevice.id,
+                    selectedDevice.shelfCableHolesLeft || 0,
+                    parseInt(e.target.value)
+                  )}
+                  className="flex-1"
+                  min={0}
+                  max={5}
+                />
+                <span className="text-xs text-gray-300 w-4 text-center">{selectedDevice.shelfCableHolesRight || 0}</span>
+              </div>
+            </div>
           )}
         </div>
       )}

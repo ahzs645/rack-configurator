@@ -69,6 +69,16 @@ export const BACK_STYLE_LABELS: Record<BackStyle, string> = {
 
 export type VentType = 'honeycomb' | 'rectangular';
 
+// Shelf notch position options
+export type ShelfNotch = 'none' | 'left' | 'right' | 'center';
+
+export const SHELF_NOTCH_LABELS: Record<ShelfNotch, string> = {
+  none: 'No Notch',
+  left: 'Left Side',
+  right: 'Right Side',
+  center: 'Center',
+};
+
 // Split render modes
 export type RenderMode = 'single' | 'both' | 'left' | 'right' | 'left_print' | 'right_print';
 
@@ -127,6 +137,13 @@ export interface PlacedDevice {
   customName?: string;
   // For patch panel mount type:
   patchPanelPorts?: number;  // Number of keystone ports (default: 6)
+  // For shelf mount type:
+  shelfUseHoneycomb?: boolean;      // Use honeycomb pattern (default: true)
+  shelfNotch?: ShelfNotch;          // LED notch position
+  shelfNotchWidth?: number;         // Notch width in mm (default: 100)
+  shelfScrewHoles?: number;         // Number of screw holes (0-5, default: 0)
+  shelfCableHolesLeft?: number;     // Left cable routing holes (0-5, default: 0)
+  shelfCableHolesRight?: number;    // Right cable routing holes (0-5, default: 0)
 }
 
 // Full rack configuration

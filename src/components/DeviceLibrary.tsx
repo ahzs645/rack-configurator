@@ -8,6 +8,7 @@ import {
   getDevicesByCategory,
 } from '../data/devices';
 import { useRackStore } from '../state/rack-store';
+import type { MountType } from '../state/types';
 
 interface CustomDeviceFormProps {
   isExpanded: boolean;
@@ -115,8 +116,13 @@ function DeviceCard({ device }: DeviceCardProps) {
   });
 
   const handleDoubleClick = () => {
-    // Use patch_panel mount type for patch panel devices
-    const mountType = device.id === 'patch_panel' ? 'patch_panel' : 'cage';
+    // Use the first allowed mount type, or default based on device type
+    let mountType: MountType = 'cage';
+    if (device.id === 'patch_panel') {
+      mountType = 'patch_panel';
+    } else if (device.allowedMountTypes && device.allowedMountTypes.length > 0) {
+      mountType = device.allowedMountTypes[0];
+    }
     addDevice(device.id, 0, 0, mountType);
   };
 

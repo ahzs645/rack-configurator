@@ -107,9 +107,12 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
  * Generate the devices array in OpenSCAD syntax
  * Device format: ["device_id", offsetX, offsetY, mountType, backStyle]
  * Device with patch panel: ["device_id", offsetX, offsetY, mountType, backStyle, patchPanelPorts]
+ * Device with shelf: ["device_id", offsetX, offsetY, "shelf", backStyle, [shelfParams]]
  * Custom device format: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle]
  * Custom device with patch panel: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle, patchPanelPorts]
+ * Custom device with shelf: ["custom", offsetX, offsetY, "shelf", [w, h, d], "name", backStyle, [shelfParams]]
  * backStyle can be "default" to use global setting, or "solid"/"vent"/"none" for override
+ * shelfParams = [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight]
  */
 function generateDevicesArray(devices: PlacedDevice[]): string {
   if (devices.length === 0) {
@@ -121,22 +124,46 @@ function generateDevicesArray(devices: PlacedDevice[]): string {
     const backStyle = device.backStyle || 'default';
     const patchPanelPorts = device.patchPanelPorts || 6;  // Default to 6 ports
 
+    // Generate shelf params array if this is a shelf mount
+    const shelfParams = device.mountType === 'shelf' ? generateShelfParams(device) : null;
+
     if (device.deviceId === 'custom') {
-      // Custom device: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle, patchPanelPorts?]
+      // Custom device: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle, extraParams?]
       if (device.mountType === 'patch_panel') {
         return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}", ${patchPanelPorts}]`;
       }
+      if (device.mountType === 'shelf' && shelfParams) {
+        return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}", ${shelfParams}]`;
+      }
       return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}"]`;
     } else {
-      // Standard device: ["device_id", offsetX, offsetY, mountType, backStyle, patchPanelPorts?]
+      // Standard device: ["device_id", offsetX, offsetY, mountType, backStyle, extraParams?]
       if (device.mountType === 'patch_panel') {
         return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}", ${patchPanelPorts}]`;
+      }
+      if (device.mountType === 'shelf' && shelfParams) {
+        return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}", ${shelfParams}]`;
       }
       return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}"]`;
     }
   });
 
   return '[\n' + deviceStrings.join(',\n') + '\n    ]';
+}
+
+/**
+ * Generate shelf parameters array for OpenSCAD
+ * Returns: [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight]
+ */
+function generateShelfParams(device: PlacedDevice): string {
+  const useHoneycomb = device.shelfUseHoneycomb !== false;  // Default true
+  const notch = device.shelfNotch || 'none';
+  const notchWidth = device.shelfNotchWidth || 100;
+  const screwHoles = device.shelfScrewHoles || 0;
+  const cableHolesLeft = device.shelfCableHolesLeft || 0;
+  const cableHolesRight = device.shelfCableHolesRight || 0;
+
+  return `[${useHoneycomb}, "${notch}", ${notchWidth}, ${screwHoles}, ${cableHolesLeft}, ${cableHolesRight}]`;
 }
 
 /**

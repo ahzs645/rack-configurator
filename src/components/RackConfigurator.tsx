@@ -338,13 +338,16 @@ export function RackConfigurator() {
   const rackBounds = getRackBoundsSvg(view);
   const rack = getRackDimensions(config.rackU, config.panelWidth);
 
-  // Calculate pan limits based on rack size and viewport
+  // Calculate pan limits based on rack size, viewport, and zoom level
   const getPanLimits = useCallback(() => {
-    // Allow panning up to half the viewport size beyond the rack
-    const maxPanX = svgSize.width * 0.4;
-    const maxPanY = svgSize.height * 0.4;
+    // At higher zoom levels, allow panning further to see the whole rack
+    // Scale pan limits with zoom so user can reach all parts of the zoomed view
+    const baseLimit = 0.4;
+    const zoomFactor = Math.max(1, zoom);
+    const maxPanX = svgSize.width * baseLimit * zoomFactor;
+    const maxPanY = svgSize.height * baseLimit * zoomFactor;
     return { maxPanX, maxPanY };
-  }, [svgSize.width, svgSize.height]);
+  }, [svgSize.width, svgSize.height, zoom]);
 
   // Clamp pan values to limits
   const clampPan = useCallback((x: number, y: number) => {

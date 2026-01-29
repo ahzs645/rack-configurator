@@ -8,6 +8,7 @@ import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 import type { ViewConfig } from '../utils/coordinates';
 import { rackToSvg, rackSizeToSvg, calculateFitScale } from '../utils/coordinates';
 import { useRackStore } from '../state/rack-store';
+import { getAllowedMountTypes } from '../data/devices';
 
 // Short labels for mount types
 const MOUNT_TYPE_SHORT: Record<MountType, string> = {
@@ -333,24 +334,30 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
           <div className="px-2 py-1 text-xs text-gray-400 border-b border-gray-700">
             Mount Type
           </div>
-          {(Object.keys(MOUNT_TYPE_LABELS) as MountType[]).map((mt) => (
-            <button
-              key={mt}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMountTypeChange(mt);
-              }}
-              className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2 ${
-                device.mountType === mt ? 'bg-gray-700 text-white' : 'text-gray-300'
-              }`}
-            >
-              <span
-                className="w-3 h-3 rounded"
-                style={{ backgroundColor: MOUNT_TYPE_COLORS[mt] }}
-              />
-              {MOUNT_TYPE_LABELS[mt]}
-            </button>
-          ))}
+          {(() => {
+            // Get allowed mount types for this device (undefined means all allowed)
+            const allowedTypes = device.deviceId !== 'custom' ? getAllowedMountTypes(device.deviceId) : undefined;
+            const mountTypes = allowedTypes || (Object.keys(MOUNT_TYPE_LABELS) as MountType[]);
+
+            return mountTypes.map((mt) => (
+              <button
+                key={mt}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMountTypeChange(mt);
+                }}
+                className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2 ${
+                  device.mountType === mt ? 'bg-gray-700 text-white' : 'text-gray-300'
+                }`}
+              >
+                <span
+                  className="w-3 h-3 rounded"
+                  style={{ backgroundColor: MOUNT_TYPE_COLORS[mt] }}
+                />
+                {MOUNT_TYPE_LABELS[mt]}
+              </button>
+            ));
+          })()}
         </div>,
         document.body
       )}

@@ -1,6 +1,8 @@
 // Device database extracted from OpenSCAD components/devices.scad
 // Format: id, dimensions [width, height, depth] in mm, display name, category
 
+import type { MountType } from '../state/types';
+
 export interface RackDevice {
   id: string;
   name: string;
@@ -8,6 +10,7 @@ export interface RackDevice {
   width: number;   // mm
   height: number;  // mm
   depth: number;   // mm
+  allowedMountTypes?: MountType[];  // If specified, only these mount types are allowed
 }
 
 export type DeviceCategory =
@@ -77,14 +80,14 @@ export const DEVICES: RackDevice[] = [
   { id: 'home_assistant_yellow', name: 'Home Assistant Yellow', category: 'smart_home', width: 125, height: 37, depth: 125 },
   { id: 'home_assistant_green', name: 'Home Assistant Green', category: 'smart_home', width: 112, height: 29, depth: 112 },
 
-  // Zigbee / Z-Wave Coordinators
-  { id: 'slzb_06', name: 'SLZB-06 Zigbee', category: 'coordinator', width: 23.4, height: 20, depth: 90 },
-  { id: 'slzb_06m', name: 'SLZB-06M Zigbee', category: 'coordinator', width: 35, height: 25, depth: 70 },
-  { id: 'sonoff_zbdongle_p', name: 'Sonoff ZBDongle-P', category: 'coordinator', width: 25, height: 15, depth: 80 },
-  { id: 'sonoff_zbdongle_e', name: 'Sonoff ZBDongle-E', category: 'coordinator', width: 26, height: 13, depth: 80 },
-  { id: 'conbee_ii', name: 'ConBee II', category: 'coordinator', width: 22, height: 6, depth: 70 },
-  { id: 'skyconnect', name: 'Home Assistant SkyConnect', category: 'coordinator', width: 22, height: 8, depth: 45 },
-  { id: 'zooz_zst10', name: 'Zooz ZST10 Z-Wave', category: 'coordinator', width: 20, height: 9, depth: 50 },
+  // Zigbee / Z-Wave Coordinators (passthrough only - these are small USB-style devices)
+  { id: 'slzb_06', name: 'SLZB-06 Zigbee', category: 'coordinator', width: 23.4, height: 20, depth: 90, allowedMountTypes: ['passthrough', 'none'] },
+  { id: 'slzb_06m', name: 'SLZB-06M Zigbee', category: 'coordinator', width: 35, height: 25, depth: 70, allowedMountTypes: ['passthrough', 'none'] },
+  { id: 'sonoff_zbdongle_p', name: 'Sonoff ZBDongle-P', category: 'coordinator', width: 25, height: 15, depth: 80, allowedMountTypes: ['passthrough', 'none'] },
+  { id: 'sonoff_zbdongle_e', name: 'Sonoff ZBDongle-E', category: 'coordinator', width: 26, height: 13, depth: 80, allowedMountTypes: ['passthrough', 'none'] },
+  { id: 'conbee_ii', name: 'ConBee II', category: 'coordinator', width: 22, height: 6, depth: 70, allowedMountTypes: ['passthrough', 'none'] },
+  { id: 'skyconnect', name: 'Home Assistant SkyConnect', category: 'coordinator', width: 22, height: 8, depth: 45, allowedMountTypes: ['passthrough', 'none'] },
+  { id: 'zooz_zst10', name: 'Zooz ZST10 Z-Wave', category: 'coordinator', width: 20, height: 9, depth: 50, allowedMountTypes: ['passthrough', 'none'] },
 
   // Single Board Computers
   { id: 'raspberry_pi_5', name: 'Raspberry Pi 5', category: 'sbc', width: 85, height: 17, depth: 56 },
@@ -126,4 +129,10 @@ export function getDevicesGroupedByCategory(): Record<DeviceCategory, RackDevice
     grouped[category] = getDevicesByCategory(category);
   }
   return grouped;
+}
+
+// Get allowed mount types for a device (returns all types if not restricted)
+export function getAllowedMountTypes(deviceId: string): MountType[] | undefined {
+  const device = getDevice(deviceId);
+  return device?.allowedMountTypes;
 }

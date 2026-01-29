@@ -102,6 +102,26 @@ function _get_dev_patch_ports(device_entry) =
         ? (len(device_entry) > 7 ? device_entry[7] : 6)
         : (len(device_entry) > 5 ? device_entry[5] : 6);
 
+// Get shelf params array (returns defaults if not specified)
+// Standard device with shelf: ["device_id", offsetX, offsetY, "shelf", backStyle, [shelfParams]]
+// Custom device with shelf: ["custom", offsetX, offsetY, "shelf", [w,h,d], "name", backStyle, [shelfParams]]
+// shelfParams = [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight]
+function _get_dev_shelf_params(device_entry) =
+    let(
+        raw_params = device_entry[0] == "custom"
+            ? (len(device_entry) > 7 ? device_entry[7] : [])
+            : (len(device_entry) > 5 ? device_entry[5] : [])
+    )
+    len(raw_params) >= 6 ? raw_params : [true, "none", 100, 0, 0, 0];
+
+// Extract individual shelf params with defaults
+function _shelf_use_honeycomb(params) = len(params) > 0 ? params[0] : true;
+function _shelf_notch(params) = len(params) > 1 ? params[1] : "none";
+function _shelf_notch_width(params) = len(params) > 2 ? params[2] : 100;
+function _shelf_screw_holes(params) = len(params) > 3 ? params[3] : 0;
+function _shelf_cable_left(params) = len(params) > 4 ? params[4] : 0;
+function _shelf_cable_right(params) = len(params) > 5 ? params[5] : 0;
+
 // ============================================================================
 // MAIN RACK FACEPLATE MODULE
 // Creates a complete single-piece rack faceplate with devices
@@ -612,11 +632,28 @@ module _rg_device_mount(
         );
     }
     else if (mount_type == "shelf") {
-        // Ventilated shelf with lips
-        ventilated_shelf_positioned(
-            offset_x, offset_y,
-            dev_w, dev_d, dev_h,
-            3, 5, true, true, plate_thick
+        // Enhanced shelf with honeycomb, supports, LED notch, and cable routing
+        shelf_params = _get_dev_shelf_params(device_entry);
+        enhanced_shelf_positioned(
+            offset_x = offset_x,
+            offset_y = offset_y,
+            width = dev_w,
+            depth = dev_d,
+            device_h = dev_h,
+            thickness = 3,
+            use_honeycomb = _shelf_use_honeycomb(shelf_params),
+            hex_dia = hex_dia,
+            hex_wall = hex_wall,
+            notch = _shelf_notch(shelf_params),
+            notch_size = [_shelf_notch_width(shelf_params), 5, 15],
+            screw_holes = _shelf_screw_holes(shelf_params),
+            screw_inner_dia = 3,
+            screw_outer_dia = 8,
+            cable_holes_left = _shelf_cable_left(shelf_params),
+            cable_holes_right = _shelf_cable_right(shelf_params),
+            cable_hole_dia = 8,
+            top_support_depth = 20,
+            plate_thick = plate_thick
         );
     }
     else if (mount_type == "storage" || mount_type == "storage_tray") {

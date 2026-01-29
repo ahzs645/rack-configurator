@@ -11,6 +11,7 @@ import type {
   JoinerType,
   JoinerNutSide,
   JoinerScrewType,
+  ShelfNotch,
 } from './types';
 import { DEFAULT_RACK_CONFIG, getToollessHookCount } from './types';
 
@@ -75,6 +76,12 @@ interface RackStore {
   updateDeviceBackStyle: (id: string, backStyle: BackStyle) => void;
   updateDeviceDimensions: (id: string, width: number, height: number, depth: number) => void;
   updateDevicePatchPanelPorts: (id: string, ports: number) => void;
+  // Shelf-specific updates
+  updateDeviceShelfHoneycomb: (id: string, useHoneycomb: boolean) => void;
+  updateDeviceShelfNotch: (id: string, notch: ShelfNotch) => void;
+  updateDeviceShelfNotchWidth: (id: string, width: number) => void;
+  updateDeviceShelfScrewHoles: (id: string, count: number) => void;
+  updateDeviceShelfCableHoles: (id: string, left: number, right: number) => void;
   moveDeviceToSide: (id: string, side: 'left' | 'right' | 'main') => void;
   selectDevice: (id: string | null) => void;
   clearDevices: () => void;
@@ -611,6 +618,87 @@ export const useRackStore = create<RackStore>((set, get) => ({
         ),
         rightDevices: state.config.rightDevices.map((d) =>
           d.id === id ? { ...d, patchPanelPorts: ports } : d
+        ),
+      },
+    })),
+
+  // Shelf-specific updates
+  updateDeviceShelfHoneycomb: (id, useHoneycomb) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, shelfUseHoneycomb: useHoneycomb } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, shelfUseHoneycomb: useHoneycomb } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, shelfUseHoneycomb: useHoneycomb } : d
+        ),
+      },
+    })),
+
+  updateDeviceShelfNotch: (id, notch) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, shelfNotch: notch } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, shelfNotch: notch } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, shelfNotch: notch } : d
+        ),
+      },
+    })),
+
+  updateDeviceShelfNotchWidth: (id, width) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, shelfNotchWidth: width } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, shelfNotchWidth: width } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, shelfNotchWidth: width } : d
+        ),
+      },
+    })),
+
+  updateDeviceShelfScrewHoles: (id, count) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, shelfScrewHoles: count } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, shelfScrewHoles: count } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, shelfScrewHoles: count } : d
+        ),
+      },
+    })),
+
+  updateDeviceShelfCableHoles: (id, left, right) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, shelfCableHolesLeft: left, shelfCableHolesRight: right } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, shelfCableHolesLeft: left, shelfCableHolesRight: right } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, shelfCableHolesLeft: left, shelfCableHolesRight: right } : d
         ),
       },
     })),
