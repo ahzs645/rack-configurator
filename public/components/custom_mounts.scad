@@ -919,7 +919,11 @@ module enhanced_shelf(
             // Side walls with honeycomb
             // ============================================
             for (side = [0, 1]) {
-                x_offset = side * (width - thickness);
+                // Adjust x_offset to account for -X extrusion after rotation
+                // Side 0: translate to thickness -> extends to 0
+                // Side 1: translate to width -> extends to width-thickness
+                x_offset = side == 0 ? thickness : width;
+                
                 translate([x_offset, 0, thickness]) {
                     if (use_honeycomb) {
                         rotate([0, -90, 0])
@@ -950,9 +954,9 @@ module enhanced_shelf(
             }
 
             // ============================================
-            // Top support beam (now at bottom since walls extend down)
+            // Top support beam (positioned at top, under shelf plate)
             // ============================================
-            translate([0, 0, thickness + height - top_thickness]) {
+            translate([0, 0, thickness]) {
                 cube([width, top_support_depth, top_thickness]);
             }
 
@@ -961,7 +965,9 @@ module enhanced_shelf(
             // ============================================
             _shelf_support_triangle_length = min(height * 0.8, depth * 0.3);
             for (side = [0, 1]) {
-                x_offset = side * (width - thickness);
+                // Same x_offset adjustment as side walls
+                x_offset = side == 0 ? thickness : width;
+                
                 translate([x_offset, 0, thickness]) {
                     rotate([0, -90, 0])
                     linear_extrude(thickness) {
