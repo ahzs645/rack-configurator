@@ -219,8 +219,8 @@ module storage_tray_positioned(
     outer_width = width + 2 * wall_thickness;
     outer_depth = depth + 2 * wall_thickness;
 
-    translate([offset_x - outer_width/2, offset_y + y_offset, 0])
-    mirror([0, 1, 0]) {
+    translate([offset_x - outer_width/2, -offset_y - y_offset - base_thickness, 0])
+    mirror([0, 0, 1]) {
         difference() {
             // Outer shell (extends in -Z for depth into rack, Y for height)
             cube([outer_width, base_thickness + wall_height, outer_depth]);

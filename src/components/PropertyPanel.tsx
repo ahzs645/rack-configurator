@@ -3,6 +3,7 @@ import { useRackStore } from '../state/rack-store';
 import type { MountType, PlacedDevice, BackStyle, JoinerScrewType, JoinerType, ShelfNotch } from '../state/types';
 import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_SCREW_TYPE_LABELS, JOINER_TYPE_LABELS, SHELF_NOTCH_LABELS } from '../state/types';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
+import { getAllowedMountTypes } from '../data/devices';
 
 // Separate component for patch panel ports input to handle local state properly
 function PatchPanelPortsInput({
@@ -525,11 +526,21 @@ export function PropertyPanel() {
                   onChange={(e) => updateDeviceMountType(selectedDevice.id, e.target.value as MountType)}
                   className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
                 >
-                  {Object.entries(MOUNT_TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
+                  {(() => {
+                    // Get allowed mount types for this device
+                    const allowedTypes = selectedDevice.deviceId !== 'custom'
+                      ? getAllowedMountTypes(selectedDevice.deviceId)
+                      : undefined;
+                    // If no specific allowed types, exclude device-specific mounts (pi5_case, patch_panel)
+                    const mountTypes = allowedTypes
+                      || (Object.keys(MOUNT_TYPE_LABELS) as MountType[]).filter(mt => mt !== 'pi5_case' && mt !== 'patch_panel');
+
+                    return mountTypes.map((value) => (
+                      <option key={value} value={value}>
+                        {MOUNT_TYPE_LABELS[value]}
+                      </option>
+                    ));
+                  })()}
                 </select>
               </div>
 

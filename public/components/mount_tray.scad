@@ -131,33 +131,37 @@ module tray_mount_positioned(
     lip_style = "sides",
     plate_thick = 4
 ) {
-    tray_w = device_w + 2;
+    // Use device width directly (no clearance) so walls are outside
+    tray_w = device_w;
+    outer_w = tray_w + 2*wall;
+    
     actual_depth = device_d + 5;
     actual_lip = lip_height > 0 ? lip_height : device_h * 0.3;
 
-    translate([offset_x - tray_w/2 - wall, offset_y + device_h/2, 0])
-    mirror([0, 1, 0]) {
+    // Position at Bottom - Wall, build Up/In
+    translate([offset_x - outer_w/2, -offset_y - device_h/2 - wall, 0])
+    mirror([0, 0, 1]) {
         // Base tray floor (extends in -Z for depth into rack)
-        cube([tray_w + 2*wall, wall, actual_depth]);
+        cube([outer_w, wall, actual_depth]);
 
         // Side lips (extend in +Y for height)
         if (lip_style == "full" || lip_style == "sides") {
             // Left lip
             cube([wall, wall + actual_lip, actual_depth]);
             // Right lip
-            translate([tray_w + wall, 0, 0])
+            translate([outer_w - wall, 0, 0])
             cube([wall, wall + actual_lip, actual_depth]);
         }
 
         // Back lip
         if (lip_style == "full" || lip_style == "back") {
             translate([0, 0, actual_depth - wall])
-            cube([tray_w + 2*wall, wall + actual_lip, wall]);
+            cube([outer_w, wall + actual_lip, wall]);
         }
 
         // Front lip (only for full)
         if (lip_style == "full") {
-            cube([tray_w + 2*wall, wall + actual_lip * 0.5, wall]);
+            cube([outer_w, wall + actual_lip * 0.5, wall]);
         }
     }
 }
