@@ -115,7 +115,9 @@ function DeviceCard({ device }: DeviceCardProps) {
   });
 
   const handleDoubleClick = () => {
-    addDevice(device.id, 0, 0, 'cage');
+    // Use patch_panel mount type for patch panel devices
+    const mountType = device.id === 'patch_panel' ? 'patch_panel' : 'cage';
+    addDevice(device.id, 0, 0, mountType);
   };
 
   return (
@@ -181,7 +183,7 @@ export function DeviceLibrary() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<DeviceCategory>>(
-    new Set(['mini_pc', 'network'])
+    new Set(['accessories', 'mini_pc', 'network'])
   );
 
   const toggleCategory = (category: DeviceCategory) => {

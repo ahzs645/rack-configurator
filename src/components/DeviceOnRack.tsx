@@ -21,6 +21,8 @@ const MOUNT_TYPE_SHORT: Record<MountType, string> = {
   tray: 'TRAY',
   shelf: 'SHLF',
   storage: 'STOR',
+  patch_panel: 'PTCH',
+  pi5_case: 'PI5',
   none: 'NONE',
 };
 
@@ -39,6 +41,8 @@ const MOUNT_TYPE_COLORS: Record<MountType, string> = {
   tray: '#14b8a6',      // teal
   shelf: '#84cc16',     // lime
   storage: '#f97316',   // orange
+  patch_panel: '#06b6d4', // cyan
+  pi5_case: '#c026d3',  // fuchsia
   none: '#ef4444',      // red
 };
 

@@ -224,7 +224,9 @@ function App() {
         }
 
         // For position, start at center (0, 0) - user can drag to reposition
-        addDevice(deviceId, 0, 0, 'cage', side);
+        // Use patch_panel mount type for patch panel devices
+        const mountType = deviceId === 'patch_panel' ? 'patch_panel' : 'cage';
+        addDevice(deviceId, 0, 0, mountType, side);
       }
       lastPointerPosition.current = null;
       return;

@@ -41,6 +41,8 @@ use <rack_ears.scad>
 include <constants.scad>
 include <devices.scad>
 include <../rack_mounts/enclosed_box.scad>
+include <../rack_mounts/patch_panel.scad>
+include <../rack_mounts/pi5_case.scad>
 
 // ============================================================================
 // CONFIGURATION DEFAULTS
@@ -86,6 +88,14 @@ function _get_dev_back_style(device_entry) =
     device_entry[0] == "custom"
         ? (len(device_entry) > 6 ? device_entry[6] : "default")
         : (len(device_entry) > 4 ? device_entry[4] : "default");
+
+// Get patch panel port count (returns 6 if not specified)
+// Standard device with patch panel: ["device_id", offsetX, offsetY, mountType, backStyle, patchPanelPorts]
+// Custom device with patch panel: ["custom", offsetX, offsetY, mountType, [w,h,d], "name", backStyle, patchPanelPorts]
+function _get_dev_patch_ports(device_entry) =
+    device_entry[0] == "custom"
+        ? (len(device_entry) > 7 ? device_entry[7] : 6)
+        : (len(device_entry) > 5 ? device_entry[5] : 6);
 
 // ============================================================================
 // MAIN RACK FACEPLATE MODULE
@@ -537,6 +547,41 @@ module _rg_device_mount(
             dev_h,  // Use device height as wall height
             dev_h,  // device_h for positioning
             0, plate_thick
+        );
+    }
+    else if (mount_type == "patch_panel") {
+        // Keystone patch panel with configurable port count
+        patch_ports = _get_dev_patch_ports(device_entry);
+        _rg_keystone_array(offset_x, offset_y, patch_ports, plate_thick);
+    }
+    else if (mount_type == "pi5_case") {
+        // Raspberry Pi 5 case mount - attaches behind faceplate cutout
+        pi5_case_mount_positioned(offset_x, offset_y, plate_thick);
+    }
+}
+
+// ============================================================================
+// KEYSTONE ARRAY MODULE (for patch_panel mount type)
+// Creates an array of keystone holders at the specified position
+// ============================================================================
+
+module _rg_keystone_array(offset_x, offset_y, port_count, plate_thick) {
+    spacing = KEYSTONE_SPACING;  // 19mm from patch_panel.scad
+    total_width = port_count * spacing;
+
+    // Center the array at the offset position
+    start_x = offset_x - total_width / 2 + spacing / 2;
+
+    for (i = [0 : port_count - 1]) {
+        slot_x = start_x + i * spacing;
+
+        // keystone_type2 has front face at Z=0, extends backward (+Z)
+        // Place at Z=0 so front is flush with faceplate front
+        translate([slot_x, offset_y, 0])
+        keystone_type2(
+            plateThickness = plate_thick,
+            outerWidth = spacing,
+            outerHeight = 30  // Standard keystone visible height
         );
     }
 }

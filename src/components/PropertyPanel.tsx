@@ -1,8 +1,73 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRackStore } from '../state/rack-store';
 import type { MountType, PlacedDevice, BackStyle, JoinerScrewType, JoinerType } from '../state/types';
 import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_SCREW_TYPE_LABELS, JOINER_TYPE_LABELS } from '../state/types';
 import { getPlacedDeviceDimensions } from '../utils/scad-generator';
+
+// Separate component for patch panel ports input to handle local state properly
+function PatchPanelPortsInput({
+  deviceId,
+  currentPorts,
+  onUpdate,
+}: {
+  deviceId: string;
+  currentPorts: number;
+  onUpdate: (id: string, ports: number) => void;
+}) {
+  const [inputValue, setInputValue] = useState(String(currentPorts));
+
+  // Sync input value when currentPorts changes from outside (e.g., device selection change)
+  useEffect(() => {
+    setInputValue(String(currentPorts));
+  }, [currentPorts, deviceId]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+
+    // Only update store if it's a valid number
+    const parsed = parseInt(value);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 24) {
+      onUpdate(deviceId, parsed);
+    }
+  };
+
+  const handleBlur = () => {
+    // On blur, validate and reset to valid value
+    const parsed = parseInt(inputValue);
+    if (isNaN(parsed) || parsed < 1) {
+      setInputValue('1');
+      onUpdate(deviceId, 1);
+    } else if (parsed > 24) {
+      setInputValue('24');
+      onUpdate(deviceId, 24);
+    } else {
+      setInputValue(String(parsed));
+      onUpdate(deviceId, parsed);
+    }
+  };
+
+  return (
+    <div className="mt-2">
+      <label className="block text-xs text-gray-400 mb-1">Number of Ports</label>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          value={inputValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          min={1}
+          max={24}
+          className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+        />
+        <span className="text-xs text-gray-400">keystone slots</span>
+      </div>
+      <div className="text-xs text-gray-500 mt-1">
+        Each port is 19mm wide (standard keystone spacing)
+      </div>
+    </div>
+  );
+}
 
 // Placed device list item
 interface PlacedDeviceItemProps {
@@ -67,6 +132,7 @@ export function PropertyPanel() {
     updateDeviceMountType,
     updateDeviceBackStyle,
     updateDeviceDimensions,
+    updateDevicePatchPanelPorts,
     removeDevice,
     moveDeviceToSide,
     setJoinerType,
@@ -443,40 +509,51 @@ export function PropertyPanel() {
             </div>
           </div>
 
-          {/* Mount Type and Back Style */}
-          <div className="flex gap-2">
-            {/* Mount Type */}
-            <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">Mount</label>
-              <select
-                value={selectedDevice.mountType}
-                onChange={(e) => updateDeviceMountType(selectedDevice.id, e.target.value as MountType)}
-                className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-              >
-                {Object.entries(MOUNT_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Mount Type and Back Style (hide for patch_panel) */}
+          {selectedDevice.mountType !== 'patch_panel' && (
+            <div className="flex gap-2">
+              {/* Mount Type */}
+              <div className="flex-1">
+                <label className="block text-xs text-gray-400 mb-1">Mount</label>
+                <select
+                  value={selectedDevice.mountType}
+                  onChange={(e) => updateDeviceMountType(selectedDevice.id, e.target.value as MountType)}
+                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                >
+                  {Object.entries(MOUNT_TYPE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Back Style */}
-            <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">Back</label>
-              <select
-                value={selectedDevice.backStyle || config.backStyle}
-                onChange={(e) => updateDeviceBackStyle(selectedDevice.id, e.target.value as BackStyle)}
-                className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-              >
-                {Object.entries(BACK_STYLE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              {/* Back Style */}
+              <div className="flex-1">
+                <label className="block text-xs text-gray-400 mb-1">Back</label>
+                <select
+                  value={selectedDevice.backStyle || config.backStyle}
+                  onChange={(e) => updateDeviceBackStyle(selectedDevice.id, e.target.value as BackStyle)}
+                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                >
+                  {Object.entries(BACK_STYLE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Patch Panel Ports (only for patch_panel mount type) */}
+          {selectedDevice.mountType === 'patch_panel' && (
+            <PatchPanelPortsInput
+              deviceId={selectedDevice.id}
+              currentPorts={selectedDevice.patchPanelPorts || 6}
+              onUpdate={updateDevicePatchPanelPorts}
+            />
+          )}
         </div>
       )}
 

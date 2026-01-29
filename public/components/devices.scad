@@ -21,6 +21,11 @@
 
 DEVICES = [
     // -------------------------------------------------------------------------
+    // Rack Accessories
+    // -------------------------------------------------------------------------
+    ["patch_panel",          [114, 30, 15],   "Keystone Patch Panel",           "accessories"],
+
+    // -------------------------------------------------------------------------
     // Mini PCs / NUCs
     // -------------------------------------------------------------------------
     ["minisforum_um890",     [128, 52, 126],  "Minisforum UM890 Pro",    "mini_pc"],
@@ -85,6 +90,7 @@ DEVICES = [
     // Single Board Computers
     // -------------------------------------------------------------------------
     ["raspberry_pi_5",       [85, 17, 56],    "Raspberry Pi 5",          "sbc"],
+    ["raspberry_pi_5_case",  [93, 64, 35],    "Raspberry Pi 5 (Case)",   "sbc"],
     ["raspberry_pi_4",       [85, 17, 56],    "Raspberry Pi 4",          "sbc"],
     ["raspberry_pi_zero_2w", [65, 5, 30],     "Raspberry Pi Zero 2 W",   "sbc"],
     ["orange_pi_5",          [100, 17, 62],   "Orange Pi 5",             "sbc"],

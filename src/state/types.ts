@@ -11,6 +11,8 @@ export type MountType =
   | 'tray'           // Open tray mount
   | 'shelf'          // Ventilated shelf
   | 'storage'        // Deep tray with walls
+  | 'patch_panel'    // Keystone patch panel with configurable ports
+  | 'pi5_case'       // Raspberry Pi 5 case mount (attaches behind faceplate cutout)
   | 'none';          // Cutout only, no mount
 
 export const MOUNT_TYPE_LABELS: Record<MountType, string> = {
@@ -24,6 +26,8 @@ export const MOUNT_TYPE_LABELS: Record<MountType, string> = {
   tray: 'Tray',
   shelf: 'Shelf',
   storage: 'Storage',
+  patch_panel: 'Patch Panel',
+  pi5_case: 'Raspberry Pi 5 Case',
   none: 'None (Cutout)',
 };
 
@@ -121,6 +125,8 @@ export interface PlacedDevice {
   customHeight?: number;
   customDepth?: number;
   customName?: string;
+  // For patch panel mount type:
+  patchPanelPorts?: number;  // Number of keystone ports (default: 6)
 }
 
 // Full rack configuration

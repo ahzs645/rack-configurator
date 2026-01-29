@@ -104,7 +104,9 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
 /**
  * Generate the devices array in OpenSCAD syntax
  * Device format: ["device_id", offsetX, offsetY, mountType, backStyle]
+ * Device with patch panel: ["device_id", offsetX, offsetY, mountType, backStyle, patchPanelPorts]
  * Custom device format: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle]
+ * Custom device with patch panel: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle, patchPanelPorts]
  * backStyle can be "default" to use global setting, or "solid"/"vent"/"none" for override
  */
 function generateDevicesArray(devices: PlacedDevice[]): string {
@@ -115,12 +117,19 @@ function generateDevicesArray(devices: PlacedDevice[]): string {
   const deviceStrings = devices.map((device) => {
     // Use "default" if no per-device backStyle is set, otherwise use the specific style
     const backStyle = device.backStyle || 'default';
+    const patchPanelPorts = device.patchPanelPorts || 6;  // Default to 6 ports
 
     if (device.deviceId === 'custom') {
-      // Custom device: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle]
+      // Custom device: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle, patchPanelPorts?]
+      if (device.mountType === 'patch_panel') {
+        return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}", ${patchPanelPorts}]`;
+      }
       return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}"]`;
     } else {
-      // Standard device: ["device_id", offsetX, offsetY, mountType, backStyle]
+      // Standard device: ["device_id", offsetX, offsetY, mountType, backStyle, patchPanelPorts?]
+      if (device.mountType === 'patch_panel') {
+        return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}", ${patchPanelPorts}]`;
+      }
       return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}"]`;
     }
   });
@@ -148,6 +157,28 @@ export function getPlacedDeviceDimensions(device: PlacedDevice): {
 
   const deviceData = getDevice(device.deviceId);
   if (deviceData) {
+    // Special handling for patch panel - calculate width based on port count
+    if (device.mountType === 'patch_panel') {
+      const ports = device.patchPanelPorts || 6;
+      const keystoneSpacing = 19; // mm per keystone slot
+      return {
+        width: ports * keystoneSpacing,
+        height: 30, // Standard keystone visible height
+        depth: 15,
+        name: `${ports}-Port Patch Panel`,
+      };
+    }
+
+    // Special handling for Pi 5 case mount - use case dimensions
+    if (device.mountType === 'pi5_case') {
+      return {
+        width: 93,   // PI5_CASE_FACE_W (85 + 2*(2+1))
+        height: 64,  // PI5_CASE_FACE_H (56 + 2*(2+1))
+        depth: 35,   // PI5_CASE_DEPTH
+        name: 'Raspberry Pi 5 Case',
+      };
+    }
+
     return {
       width: deviceData.width,
       height: deviceData.height,
