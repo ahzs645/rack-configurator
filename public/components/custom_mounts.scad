@@ -920,17 +920,17 @@ module enhanced_shelf(
             // ============================================
             for (side = [0, 1]) {
                 x_offset = side * (width - thickness);
-                translate([x_offset, 0, 0]) {
+                translate([x_offset, -height, 0]) {
                     if (use_honeycomb) {
                         rotate([0, -90, 0])
                         linear_extrude(thickness) {
                             honey_shape(thickness, hex_dia, hex_wall) {
-                                // Trapezoidal side wall profile
+                                // Trapezoidal side wall profile - extends downward from shelf
                                 polygon([
-                                    [0, 0],
                                     [0, height],
-                                    [top_support_depth, height],
-                                    [depth, 0]
+                                    [0, 0],
+                                    [top_support_depth, 0],
+                                    [depth, height]
                                 ]);
                             }
                         }
@@ -938,10 +938,10 @@ module enhanced_shelf(
                         rotate([0, -90, 0])
                         linear_extrude(thickness) {
                             polygon([
-                                [0, 0],
                                 [0, height],
-                                [top_support_depth, height],
-                                [depth, 0]
+                                [0, 0],
+                                [top_support_depth, 0],
+                                [depth, height]
                             ]);
                         }
                     }
@@ -949,25 +949,25 @@ module enhanced_shelf(
             }
 
             // ============================================
-            // Top support beam
+            // Top support beam (now at bottom since walls extend down)
             // ============================================
-            translate([0, height - top_thickness, 0]) {
+            translate([0, -height, 0]) {
                 cube([width, top_thickness, top_support_depth]);
             }
 
             // ============================================
-            // Support triangles at front bottom corners
+            // Support triangles at corners (extending down from shelf)
             // ============================================
             _shelf_support_triangle_length = min(height * 0.8, depth * 0.3);
             for (side = [0, 1]) {
                 x_offset = side * (width - thickness);
-                translate([x_offset, 0, 0]) {
+                translate([x_offset, -_shelf_support_triangle_length, 0]) {
                     rotate([0, -90, 0])
                     linear_extrude(thickness) {
                         polygon([
-                            [0, 0],
                             [0, _shelf_support_triangle_length],
-                            [_shelf_support_triangle_length, 0]
+                            [0, 0],
+                            [_shelf_support_triangle_length, _shelf_support_triangle_length]
                         ]);
                     }
                 }
