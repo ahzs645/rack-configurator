@@ -1113,7 +1113,7 @@ module enhanced_shelf_positioned(
     // Offset by thickness so the top surface of the platform aligns with cutout bottom
 
     translate([offset_x - width/2, offset_y + device_h/2 + thickness, plate_thick])
-    mirror([0, 0, 1])
+    rotate([0, 0, -90])
     rotate([90, 0, 0])
     enhanced_shelf(
         width = width,
