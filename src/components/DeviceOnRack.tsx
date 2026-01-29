@@ -337,7 +337,8 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
           {(() => {
             // Get allowed mount types for this device (undefined means all allowed)
             const allowedTypes = device.deviceId !== 'custom' ? getAllowedMountTypes(device.deviceId) : undefined;
-            const mountTypes = allowedTypes || (Object.keys(MOUNT_TYPE_LABELS) as MountType[]);
+            // If no specific allowed types, show all EXCEPT pi5_case (which is device-specific)
+            const mountTypes = allowedTypes || (Object.keys(MOUNT_TYPE_LABELS) as MountType[]).filter(mt => mt !== 'pi5_case');
 
             return mountTypes.map((mt) => (
               <button

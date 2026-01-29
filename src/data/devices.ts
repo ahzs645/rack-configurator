@@ -91,7 +91,7 @@ export const DEVICES: RackDevice[] = [
 
   // Single Board Computers
   { id: 'raspberry_pi_5', name: 'Raspberry Pi 5', category: 'sbc', width: 85, height: 17, depth: 56 },
-  { id: 'raspberry_pi_5_case', name: 'Raspberry Pi 5 (Case Mount)', category: 'sbc', width: 93, height: 64, depth: 35 },
+  { id: 'raspberry_pi_5_case', name: 'Raspberry Pi 5 (Case Mount)', category: 'sbc', width: 93, height: 64, depth: 35, allowedMountTypes: ['pi5_case', 'none'] },
   { id: 'raspberry_pi_4', name: 'Raspberry Pi 4', category: 'sbc', width: 85, height: 17, depth: 56 },
   { id: 'raspberry_pi_zero_2w', name: 'Raspberry Pi Zero 2 W', category: 'sbc', width: 65, height: 5, depth: 30 },
   { id: 'orange_pi_5', name: 'Orange Pi 5', category: 'sbc', width: 100, height: 17, depth: 62 },

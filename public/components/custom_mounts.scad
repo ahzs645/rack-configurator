@@ -896,7 +896,7 @@ module enhanced_shelf(
     top_support_depth = 20
 ) {
     // Calculate derived dimensions
-    // inner_width is now the full width since walls are moved outside
+    // Keep screw holes centered on the original device width
     inner_width = width;
     top_thickness = min(height * 0.5, 7);  // Top beam thickness
 
@@ -954,13 +954,6 @@ module enhanced_shelf(
                         }
                     }
                 }
-            }
-
-            // ============================================
-            // Top support beam (positioned at top, under shelf plate)
-            // ============================================
-            translate([-thickness, 0, thickness]) {
-                cube([width + 2*thickness, top_support_depth, top_thickness]);
             }
 
             // ============================================
