@@ -211,6 +211,72 @@ function RackEar({ side, rackBounds, earStyle, earPosition, hookPattern, rackU, 
   }
 }
 
+// Render trim notches for sections without hooks (when trim is enabled)
+interface TrimNotchesProps {
+  rackBounds: { x: number; y: number; width: number; height: number };
+  hookPattern: boolean[];
+  trimPattern: boolean[];
+  rackU: number;
+  earThickness: number;  // The trim amount (typically 2.9mm)
+  view: ViewConfig;
+}
+
+function TrimNotches({ rackBounds, hookPattern, trimPattern, rackU, earThickness, view }: TrimNotchesProps) {
+  const hookCount = getToollessHookCount(rackU);
+  const trimWidthPx = rackSizeToSvg(earThickness, view);
+  const rackHeightMm = rackU * RACK_CONSTANTS.UNIT_HEIGHT;
+  const notches: React.ReactNode[] = [];
+
+  for (let i = 0; i < hookCount; i++) {
+    const isHookDisabled = !(hookPattern[i] ?? true);
+    const isTrimEnabled = isHookDisabled && (trimPattern[i] ?? false);
+
+    if (isTrimEnabled) {
+      // Calculate the section boundaries for this hook position
+      const sectionStartMm = i * TOOLLESS_HOOK_SPACING;
+      const sectionEndMm = Math.min((i + 1) * TOOLLESS_HOOK_SPACING, rackHeightMm);
+      const sectionHeightMm = sectionEndMm - sectionStartMm;
+
+      // Convert to SVG coordinates (Y increases downward in SVG)
+      const sectionHeightPx = rackSizeToSvg(sectionHeightMm, view);
+      const sectionOffsetFromBottomPx = rackSizeToSvg(sectionStartMm, view);
+      const sectionTopY = rackBounds.y + rackBounds.height - sectionOffsetFromBottomPx - sectionHeightPx;
+
+      // Left notch
+      notches.push(
+        <rect
+          key={`trim-left-${i}`}
+          x={rackBounds.x}
+          y={sectionTopY}
+          width={trimWidthPx}
+          height={sectionHeightPx}
+          fill="#111827"
+          stroke="#f59e0b"
+          strokeWidth={1}
+          strokeOpacity={0.5}
+        />
+      );
+
+      // Right notch
+      notches.push(
+        <rect
+          key={`trim-right-${i}`}
+          x={rackBounds.x + rackBounds.width - trimWidthPx}
+          y={sectionTopY}
+          width={trimWidthPx}
+          height={sectionHeightPx}
+          fill="#111827"
+          stroke="#f59e0b"
+          strokeWidth={1}
+          strokeOpacity={0.5}
+        />
+      );
+    }
+  }
+
+  return notches.length > 0 ? <g>{notches}</g> : null;
+}
+
 export function RackConfigurator() {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -568,6 +634,18 @@ export function RackConfigurator() {
           strokeWidth={isOver ? 3 : 2}
           rx={4}
         />
+
+        {/* Trim notches for sections without hooks */}
+        {config.earStyle === 'toolless' && (
+          <TrimNotches
+            rackBounds={rackBounds}
+            hookPattern={config.toollessHookPattern || [true]}
+            trimPattern={config.toollessHookTrimPattern || []}
+            rackU={config.rackU}
+            earThickness={config.earThickness}
+            view={view}
+          />
+        )}
 
         {/* Grid lines (drawn on top of rack panel) */}
         {gridLines}

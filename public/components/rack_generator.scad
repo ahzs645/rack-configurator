@@ -130,6 +130,7 @@ module rack_faceplate(
     ear_thickness = 2.9,
     ear_position = "bottom",
     hook_pattern = [true],  // Array of booleans for toolless hook positions
+    trim_pattern = [],      // Array of booleans for sections to trim (when hook is disabled)
     clearance = _RG_DEFAULT_CLEARANCE,
     hex_diameter = _RG_DEFAULT_HEX_DIA,
     hex_wall = _RG_DEFAULT_HEX_WALL,
@@ -187,6 +188,11 @@ module rack_faceplate(
             translate([center_x + _get_dev_x(dev), -_RG_EPS, center_z + _get_dev_y(dev)])
             _rg_device_cutout(_get_dev_w(dev), _get_dev_h(dev), plate_thick, clearance);
         }
+
+        // Trim notches for hookless sections
+        if (ear_style == "toolless" && len(trim_pattern) > 0) {
+            _rg_trim_notches(width, height, plate_thick, hook_pattern, trim_pattern, ear_thickness, rack_u);
+        }
     }
 
     // Preview boxes
@@ -224,6 +230,7 @@ module rack_faceplate_split(
     ear_thickness = 2.9,
     ear_position = "bottom",
     hook_pattern = [true],  // Array of booleans for toolless hook positions
+    trim_pattern = [],      // Array of booleans for sections to trim (when hook is disabled)
     clearance = _RG_DEFAULT_CLEARANCE,
     hex_diameter = _RG_DEFAULT_HEX_DIA,
     hex_wall = _RG_DEFAULT_HEX_WALL,
@@ -259,7 +266,7 @@ module rack_faceplate_split(
             rotate([90, 0, 0])
             _rg_split_half_left(
                 rack_u, left_width, height, left_devices,
-                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
+                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern, trim_pattern,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x,  // Pass full panel center
@@ -269,7 +276,7 @@ module rack_faceplate_split(
             color("SteelBlue")
             _rg_split_half_left(
                 rack_u, left_width, height, left_devices,
-                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
+                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern, trim_pattern,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x,  // Pass full panel center
@@ -287,7 +294,7 @@ module rack_faceplate_split(
             rotate([90, 0, 0])
             _rg_split_half_right(
                 rack_u, right_width, height, right_devices,
-                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
+                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern, trim_pattern,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x, left_width,  // Pass full center and offset
@@ -297,7 +304,7 @@ module rack_faceplate_split(
             color("Coral")
             _rg_split_half_right(
                 rack_u, right_width, height, right_devices,
-                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
+                plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern, trim_pattern,
                 clearance, hex_diameter, hex_wall, heavy_device, back_style,
                 cutout_edge, cutout_radius, show_preview, show_labels,
                 full_center_x, left_width,  // Pass full center and offset
@@ -345,6 +352,74 @@ module _rg_faceplate_base(width, height, thickness, radius) {
         }
     } else {
         cube([width, thickness, height]);
+    }
+}
+
+// Trim notches for hookless sections
+// Cuts ear_thickness from both left and right edges where hooks are disabled and trim is enabled
+module _rg_trim_notches(width, height, plate_thick, hook_pattern, trim_pattern, ear_thickness, rack_u) {
+    // Calculate max hooks based on height
+    max_hooks = floor((height - HOOK_HEIGHT) / HOOK_SPACING) + 1;
+
+    for (i = [0 : min(len(trim_pattern), max_hooks) - 1]) {
+        // Only trim if hook is disabled AND trim is enabled
+        hook_enabled = i < len(hook_pattern) ? hook_pattern[i] : true;
+        trim_enabled = trim_pattern[i];
+
+        if (!hook_enabled && trim_enabled) {
+            // Calculate section Z range
+            section_start_z = i * HOOK_SPACING;
+            section_end_z = min((i + 1) * HOOK_SPACING, height);
+            section_height = section_end_z - section_start_z;
+
+            // Left notch
+            translate([-_RG_EPS, -_RG_EPS, section_start_z])
+            cube([ear_thickness + _RG_EPS, plate_thick + 2*_RG_EPS, section_height]);
+
+            // Right notch
+            translate([width - ear_thickness, -_RG_EPS, section_start_z])
+            cube([ear_thickness + _RG_EPS, plate_thick + 2*_RG_EPS, section_height]);
+        }
+    }
+}
+
+// Trim notches for left split half - only cuts the left edge
+module _rg_trim_notches_left(width, height, plate_thick, hook_pattern, trim_pattern, ear_thickness, rack_u) {
+    max_hooks = floor((height - HOOK_HEIGHT) / HOOK_SPACING) + 1;
+
+    for (i = [0 : min(len(trim_pattern), max_hooks) - 1]) {
+        hook_enabled = i < len(hook_pattern) ? hook_pattern[i] : true;
+        trim_enabled = trim_pattern[i];
+
+        if (!hook_enabled && trim_enabled) {
+            section_start_z = i * HOOK_SPACING;
+            section_end_z = min((i + 1) * HOOK_SPACING, height);
+            section_height = section_end_z - section_start_z;
+
+            // Left notch only
+            translate([-_RG_EPS, -_RG_EPS, section_start_z])
+            cube([ear_thickness + _RG_EPS, plate_thick + 2*_RG_EPS, section_height]);
+        }
+    }
+}
+
+// Trim notches for right split half - only cuts the right edge
+module _rg_trim_notches_right(width, height, plate_thick, hook_pattern, trim_pattern, ear_thickness, rack_u) {
+    max_hooks = floor((height - HOOK_HEIGHT) / HOOK_SPACING) + 1;
+
+    for (i = [0 : min(len(trim_pattern), max_hooks) - 1]) {
+        hook_enabled = i < len(hook_pattern) ? hook_pattern[i] : true;
+        trim_enabled = trim_pattern[i];
+
+        if (!hook_enabled && trim_enabled) {
+            section_start_z = i * HOOK_SPACING;
+            section_end_z = min((i + 1) * HOOK_SPACING, height);
+            section_height = section_end_z - section_start_z;
+
+            // Right notch only
+            translate([width - ear_thickness, -_RG_EPS, section_start_z])
+            cube([ear_thickness + _RG_EPS, plate_thick + 2*_RG_EPS, section_height]);
+        }
     }
 }
 
@@ -671,7 +746,7 @@ module _rg_preview_labels(devices, center_x, center_z) {
 
 module _rg_split_half_left(
     rack_u, width, height, devices,
-    plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
+    plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern, trim_pattern = [],
     clearance, hex_dia, hex_wall, heavy, back_style,
     cutout_edge, cutout_radius, show_preview, show_labels,
     full_center_x = undef,  // Full panel center for device positioning
@@ -728,12 +803,17 @@ module _rg_split_half_left(
             translate([center_x + _get_dev_x(dev), -_RG_EPS, center_z + _get_dev_y(dev)])
             _rg_device_cutout(_get_dev_w(dev), _get_dev_h(dev), plate_thick, clearance);
         }
+
+        // Trim notches for left half - only the left edge
+        if (ear_style == "toolless" && len(trim_pattern) > 0) {
+            _rg_trim_notches_left(width, height, plate_thick, hook_pattern, trim_pattern, ear_thickness, rack_u);
+        }
     }
 }
 
 module _rg_split_half_right(
     rack_u, width, height, devices,
-    plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern,
+    plate_thick, corner_radius, ear_style, ear_thickness, ear_position, hook_pattern, trim_pattern = [],
     clearance, hex_dia, hex_wall, heavy, back_style,
     cutout_edge, cutout_radius, show_preview, show_labels,
     full_center_x = undef,  // Full panel center
@@ -791,6 +871,11 @@ module _rg_split_half_right(
             dev = devices[i];
             translate([center_x + _get_dev_x(dev), -_RG_EPS, center_z + _get_dev_y(dev)])
             _rg_device_cutout(_get_dev_w(dev), _get_dev_h(dev), plate_thick, clearance);
+        }
+
+        // Trim notches for right half - only the right edge
+        if (ear_style == "toolless" && len(trim_pattern) > 0) {
+            _rg_trim_notches_right(width, height, plate_thick, hook_pattern, trim_pattern, ear_thickness, rack_u);
         }
     }
 }

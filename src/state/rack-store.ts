@@ -40,6 +40,8 @@ interface RackStore {
   setEarThickness: (thickness: number) => void;
   setToollessHookPattern: (pattern: boolean[]) => void;
   toggleToollessHook: (index: number) => void;
+  setToollessHookTrimPattern: (pattern: boolean[]) => void;
+  toggleToollessHookTrim: (index: number) => void;
   setBackStyle: (style: BackStyle) => void;
   setVentType: (type: VentType) => void;
   setPlateThickness: (thickness: number) => void;
@@ -120,16 +122,22 @@ export const useRackStore = create<RackStore>((set, get) => ({
       // When rack U changes, adjust the hook pattern to fit the new size
       const newHookCount = getToollessHookCount(rackU);
       const currentPattern = state.config.toollessHookPattern;
+      const currentTrimPattern = state.config.toollessHookTrimPattern || [];
       let newPattern: boolean[];
+      let newTrimPattern: boolean[];
 
       if (currentPattern.length >= newHookCount) {
-        // Truncate pattern if rack is smaller
+        // Truncate patterns if rack is smaller
         newPattern = currentPattern.slice(0, newHookCount);
+        newTrimPattern = currentTrimPattern.slice(0, newHookCount);
       } else {
-        // Extend pattern with true values if rack is larger (hooks on by default)
+        // Extend patterns if rack is larger
+        // Hooks on by default, trim off by default
         newPattern = [...currentPattern];
+        newTrimPattern = [...currentTrimPattern];
         while (newPattern.length < newHookCount) {
           newPattern.push(true);
+          newTrimPattern.push(false);
         }
       }
 
@@ -139,7 +147,7 @@ export const useRackStore = create<RackStore>((set, get) => ({
       }
 
       return {
-        config: { ...state.config, rackU, toollessHookPattern: newPattern },
+        config: { ...state.config, rackU, toollessHookPattern: newPattern, toollessHookTrimPattern: newTrimPattern },
       };
     }),
 
@@ -231,11 +239,20 @@ export const useRackStore = create<RackStore>((set, get) => ({
   toggleToollessHook: (index) =>
     set((state) => {
       const newPattern = [...state.config.toollessHookPattern];
-      // Ensure array is long enough
+      const newTrimPattern = [...(state.config.toollessHookTrimPattern || [])];
+      // Ensure arrays are long enough
       while (newPattern.length <= index) {
         newPattern.push(false);
       }
+      while (newTrimPattern.length <= index) {
+        newTrimPattern.push(false);
+      }
       newPattern[index] = !newPattern[index];
+
+      // If we just enabled a hook, clear its trim setting (trim only applies when hook is disabled)
+      if (newPattern[index]) {
+        newTrimPattern[index] = false;
+      }
 
       // Ensure at least one hook is enabled
       if (!newPattern.some(h => h)) {
@@ -244,7 +261,32 @@ export const useRackStore = create<RackStore>((set, get) => ({
       }
 
       return {
-        config: { ...state.config, toollessHookPattern: newPattern },
+        config: { ...state.config, toollessHookPattern: newPattern, toollessHookTrimPattern: newTrimPattern },
+      };
+    }),
+
+  setToollessHookTrimPattern: (toollessHookTrimPattern) =>
+    set((state) => ({
+      config: { ...state.config, toollessHookTrimPattern },
+    })),
+
+  toggleToollessHookTrim: (index) =>
+    set((state) => {
+      const hookPattern = state.config.toollessHookPattern || [];
+      const newTrimPattern = [...(state.config.toollessHookTrimPattern || [])];
+
+      // Ensure array is long enough
+      while (newTrimPattern.length <= index) {
+        newTrimPattern.push(false);
+      }
+
+      // Only allow trim toggle if the hook at this index is disabled
+      if (!hookPattern[index]) {
+        newTrimPattern[index] = !newTrimPattern[index];
+      }
+
+      return {
+        config: { ...state.config, toollessHookTrimPattern: newTrimPattern },
       };
     }),
 
@@ -642,11 +684,12 @@ export const useRackStore = create<RackStore>((set, get) => ({
 
   // Configuration
   loadConfig: (config) => {
-    // Migrate old configs that don't have toollessHookPattern
+    // Migrate old configs that don't have toollessHookPattern or toollessHookTrimPattern
     const hookCount = getToollessHookCount(config.rackU);
     const migratedConfig = {
       ...config,
       toollessHookPattern: config.toollessHookPattern || Array(hookCount).fill(true),
+      toollessHookTrimPattern: config.toollessHookTrimPattern || Array(hookCount).fill(false),
     };
     set({
       config: migratedConfig,

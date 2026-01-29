@@ -16,9 +16,12 @@ const DEBOUNCE_DELAY = 1000; // 1 second debounce
 function getConfigHash(config: RackConfig): string {
   return JSON.stringify({
     rackU: config.rackU,
+    panelWidth: config.panelWidth,
     earStyle: config.earStyle,
     earPosition: config.earPosition,
     earThickness: config.earThickness,
+    toollessHookPattern: config.toollessHookPattern,
+    toollessHookTrimPattern: config.toollessHookTrimPattern,
     backStyle: config.backStyle,
     ventType: config.ventType,
     plateThickness: config.plateThickness,

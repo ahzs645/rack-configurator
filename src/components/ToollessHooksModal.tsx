@@ -6,14 +6,18 @@ interface ToollessHooksModalProps {
 }
 
 export function ToollessHooksModal({ onClose }: ToollessHooksModalProps) {
-  const { config, toggleToollessHook, setToollessHookPattern } = useRackStore();
+  const { config, toggleToollessHook, setToollessHookPattern, toggleToollessHookTrim, setToollessHookTrimPattern } = useRackStore();
 
   const hookCount = getToollessHookCount(config.rackU);
   const hookPattern = config.toollessHookPattern || Array(hookCount).fill(true);
+  const trimPattern = config.toollessHookTrimPattern || Array(hookCount).fill(false);
   const enabledCount = hookPattern.filter(h => h).length;
+  const trimmedCount = trimPattern.filter((t, i) => t && !hookPattern[i]).length;
 
   const handleEnableAll = () => {
     setToollessHookPattern(Array(hookCount).fill(true));
+    // Clear all trim settings when enabling all hooks
+    setToollessHookTrimPattern(Array(hookCount).fill(false));
   };
 
   const handleDisableAll = () => {
@@ -21,6 +25,10 @@ export function ToollessHooksModal({ onClose }: ToollessHooksModalProps) {
     const pattern = Array(hookCount).fill(false);
     pattern[0] = true;
     setToollessHookPattern(pattern);
+  };
+
+  const handleClearTrims = () => {
+    setToollessHookTrimPattern(Array(hookCount).fill(false));
   };
 
   return (
@@ -46,7 +54,7 @@ export function ToollessHooksModal({ onClose }: ToollessHooksModalProps) {
           </p>
 
           {/* Quick actions */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={handleEnableAll}
               className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors"
@@ -59,37 +67,63 @@ export function ToollessHooksModal({ onClose }: ToollessHooksModalProps) {
             >
               Disable All
             </button>
+            {trimmedCount > 0 && (
+              <button
+                onClick={handleClearTrims}
+                className="px-3 py-1 text-xs bg-amber-700 hover:bg-amber-600 text-white rounded transition-colors"
+              >
+                Clear Trims
+              </button>
+            )}
           </div>
 
           {/* Hook list */}
           <div className="space-y-2">
             {Array.from({ length: hookCount }).map((_, i) => {
               const isEnabled = hookPattern[i] ?? true;
+              const isTrimmed = !isEnabled && (trimPattern[i] ?? false);
               const positionMm = Math.round(i * TOOLLESS_HOOK_SPACING * 10) / 10;
               const isOnlyEnabled = enabledCount === 1 && isEnabled;
 
               return (
-                <label
+                <div
                   key={i}
-                  className={`flex items-center gap-3 p-3 rounded cursor-pointer transition-colors ${
-                    isEnabled ? 'bg-gray-700' : 'bg-gray-800 hover:bg-gray-750'
+                  className={`p-3 rounded transition-colors ${
+                    isEnabled ? 'bg-gray-700' : 'bg-gray-800'
                   } ${isOnlyEnabled ? 'opacity-75' : ''}`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={isEnabled}
-                    onChange={() => toggleToollessHook(i)}
-                    disabled={isOnlyEnabled}
-                    className="w-4 h-4 rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800"
-                  />
-                  <div className="flex-1">
-                    <span className="text-sm text-white font-medium">Hook {i + 1}</span>
-                    <span className="text-xs text-gray-400 ml-2">at {positionMm}mm from bottom</span>
-                  </div>
-                  {isOnlyEnabled && (
-                    <span className="text-xs text-amber-400">Required</span>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isEnabled}
+                      onChange={() => toggleToollessHook(i)}
+                      disabled={isOnlyEnabled}
+                      className="w-4 h-4 rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm text-white font-medium">Hook {i + 1}</span>
+                      <span className="text-xs text-gray-400 ml-2">at {positionMm}mm from bottom</span>
+                    </div>
+                    {isOnlyEnabled && (
+                      <span className="text-xs text-amber-400">Required</span>
+                    )}
+                  </label>
+
+                  {/* Trim section option - only visible when hook is disabled */}
+                  {!isEnabled && (
+                    <label className="flex items-center gap-3 mt-2 ml-7 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isTrimmed}
+                        onChange={() => toggleToollessHookTrim(i)}
+                        className="w-3.5 h-3.5 rounded bg-gray-600 border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
+                      />
+                      <span className="text-xs text-gray-400">
+                        Trim section <span className="text-amber-400">(-2.9mm each side)</span>
+                      </span>
+                    </label>
                   )}
-                </label>
+                </div>
               );
             })}
           </div>
@@ -98,6 +132,11 @@ export function ToollessHooksModal({ onClose }: ToollessHooksModalProps) {
           <div className="pt-2 border-t border-gray-700">
             <p className="text-xs text-gray-500">
               {enabledCount} of {hookCount} hooks enabled
+              {trimmedCount > 0 && (
+                <span className="text-amber-400 ml-2">
+                  ({trimmedCount} section{trimmedCount > 1 ? 's' : ''} trimmed)
+                </span>
+              )}
             </p>
           </div>
         </div>

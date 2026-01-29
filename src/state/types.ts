@@ -137,6 +137,7 @@ export interface RackConfig {
   earPosition: EarPosition;  // Legacy - kept for non-toolless ear styles
   earThickness: number;
   toollessHookPattern: boolean[]; // Which hooks are enabled in the repeating pattern
+  toollessHookTrimPattern: boolean[]; // Which disabled hooks should have their sections trimmed (-2.9mm each side)
   backStyle: BackStyle;
 
   // Ventilation settings
@@ -205,6 +206,7 @@ export const DEFAULT_RACK_CONFIG: RackConfig = {
   earPosition: 'bottom',  // Legacy - kept for non-toolless ear styles
   earThickness: 2.9,
   toollessHookPattern: [true, true], // Default: all hooks enabled for 2U
+  toollessHookTrimPattern: [false, false], // Default: no sections trimmed
   backStyle: 'vent',
   ventType: 'honeycomb',
   hexDiameter: 8,
