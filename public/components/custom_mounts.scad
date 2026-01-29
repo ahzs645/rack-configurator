@@ -1110,9 +1110,9 @@ module enhanced_shelf_positioned(
 ) {
     // Position shelf so the platform is at the bottom of the cutout
     // After rotate([90,0,0]), the shelf geometry is inverted in Y
-    // So we position at top of cutout and walls extend downward
+    // Offset by thickness so the top surface of the platform aligns with cutout bottom
 
-    translate([offset_x - width/2, offset_y + device_h/2, plate_thick])
+    translate([offset_x - width/2, offset_y + device_h/2 + thickness, plate_thick])
     mirror([0, 0, 1])
     rotate([90, 0, 0])
     enhanced_shelf(
