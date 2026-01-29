@@ -139,11 +139,23 @@ export interface PlacedDevice {
   patchPanelPorts?: number;  // Number of keystone ports (default: 6)
   // For shelf mount type:
   shelfUseHoneycomb?: boolean;      // Use honeycomb pattern (default: true)
+  shelfSolidBottom?: boolean;       // Solid bottom instead of ventilated (default: false)
   shelfNotch?: ShelfNotch;          // LED notch position
   shelfNotchWidth?: number;         // Notch width in mm (default: 100)
   shelfScrewHoles?: number;         // Number of screw holes (0-5, default: 0)
   shelfCableHolesLeft?: number;     // Left cable routing holes (0-5, default: 0)
   shelfCableHolesRight?: number;    // Right cable routing holes (0-5, default: 0)
+  // Mounting points/standoffs (can be used on multiple mount types)
+  standoffs?: StandoffConfig[];     // Array of standoff configurations
+}
+
+// Standoff/mounting point configuration
+export interface StandoffConfig {
+  x: number;          // X position relative to center (mm)
+  y: number;          // Y position relative to center (mm)
+  height: number;     // Standoff height (mm)
+  outerDia: number;   // Outer diameter (mm)
+  holeDia: number;    // Hole diameter (mm)
 }
 
 // Full rack configuration

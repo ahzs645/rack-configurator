@@ -270,6 +270,7 @@ module enhanced_shelf(
     depth,
     height,
     thickness = 3,
+    solid_bottom = false,
     use_honeycomb = true,
     hex_dia = 8,
     hex_wall = 2,
@@ -281,7 +282,8 @@ module enhanced_shelf(
     cable_holes_left = 0,
     cable_holes_right = 0,
     cable_hole_dia = 8,
-    top_support_depth = 20
+    top_support_depth = 20,
+    standoffs = []  // Array of [x, y, height, outerDia, holeDia]
 ) {
     // Calculate derived dimensions
     // Keep screw holes centered on the original device width
@@ -291,9 +293,13 @@ module enhanced_shelf(
     difference() {
         union() {
             // ============================================
-            // Bottom shelf plate with honeycomb
+            // Bottom shelf plate - solid, honeycomb, or rectangular vents
             // ============================================
-            if (use_honeycomb) {
+            if (solid_bottom) {
+                // Solid bottom - no ventilation
+                translate([-thickness, 0, 0])
+                cube([width + 2*thickness, depth, thickness]);
+            } else if (use_honeycomb) {
                 linear_extrude(thickness) {
                     honey_shape(thickness, hex_dia, hex_wall) {
                         translate([-thickness, 0])
@@ -375,6 +381,30 @@ module enhanced_shelf(
                             cylinder(h = thickness, d = screw_outer_dia, $fn = 24);
                             translate([0, 0, -_MSH_EPS])
                             cylinder(h = thickness + 2*_MSH_EPS, d = screw_inner_dia, $fn = 16);
+                        }
+                    }
+                }
+            }
+
+            // ============================================
+            // Custom standoffs/mounting points
+            // standoffs = [[x, y, height, outerDia, holeDia], ...]
+            // ============================================
+            if (len(standoffs) > 0) {
+                for (s = standoffs) {
+                    // s = [x, y, height, outerDia, holeDia]
+                    s_x = s[0];
+                    s_y = s[1];
+                    s_height = s[2];
+                    s_outer = s[3];
+                    s_hole = s[4];
+
+                    // Position relative to shelf center
+                    translate([width/2 + s_x, depth/2 + s_y, thickness]) {
+                        difference() {
+                            cylinder(h = s_height, d = s_outer, $fn = 24);
+                            translate([0, 0, -_MSH_EPS])
+                            cylinder(h = s_height + 2*_MSH_EPS, d = s_hole, $fn = 16);
                         }
                     }
                 }
@@ -487,6 +517,7 @@ module enhanced_shelf_positioned(
     depth,
     device_h,
     thickness = 3,
+    solid_bottom = false,
     use_honeycomb = true,
     hex_dia = 8,
     hex_wall = 2,
@@ -499,6 +530,7 @@ module enhanced_shelf_positioned(
     cable_holes_right = 0,
     cable_hole_dia = 8,
     top_support_depth = 20,
+    standoffs = [],
     plate_thick = 4
 ) {
     // Position shelf so the platform is at the bottom of the cutout
@@ -512,6 +544,7 @@ module enhanced_shelf_positioned(
         depth = depth,
         height = device_h > 0 ? device_h : 30,
         thickness = thickness,
+        solid_bottom = solid_bottom,
         use_honeycomb = use_honeycomb,
         hex_dia = hex_dia,
         hex_wall = hex_wall,
@@ -523,6 +556,7 @@ module enhanced_shelf_positioned(
         cable_holes_left = cable_holes_left,
         cable_holes_right = cable_holes_right,
         cable_hole_dia = cable_hole_dia,
-        top_support_depth = top_support_depth
+        top_support_depth = top_support_depth,
+        standoffs = standoffs
     );
 }

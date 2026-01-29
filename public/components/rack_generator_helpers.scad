@@ -49,14 +49,14 @@ function _get_dev_patch_ports(device_entry) =
 // Get shelf params array (returns defaults if not specified)
 // Standard device with shelf: ["device_id", offsetX, offsetY, "shelf", backStyle, [shelfParams]]
 // Custom device with shelf: ["custom", offsetX, offsetY, "shelf", [w,h,d], "name", backStyle, [shelfParams]]
-// shelfParams = [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight]
+// shelfParams = [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight, solidBottom, standoffs]
 function _get_dev_shelf_params(device_entry) =
     let(
         raw_params = device_entry[0] == "custom"
             ? (len(device_entry) > 7 ? device_entry[7] : [])
             : (len(device_entry) > 5 ? device_entry[5] : [])
     )
-    len(raw_params) >= 6 ? raw_params : [true, "none", 100, 0, 0, 0];
+    len(raw_params) >= 6 ? raw_params : [true, "none", 100, 0, 0, 0, false, []];
 
 // Extract individual shelf params with defaults
 function _shelf_use_honeycomb(params) = len(params) > 0 ? params[0] : true;
@@ -65,6 +65,8 @@ function _shelf_notch_width(params) = len(params) > 2 ? params[2] : 100;
 function _shelf_screw_holes(params) = len(params) > 3 ? params[3] : 0;
 function _shelf_cable_left(params) = len(params) > 4 ? params[4] : 0;
 function _shelf_cable_right(params) = len(params) > 5 ? params[5] : 0;
+function _shelf_solid_bottom(params) = len(params) > 6 ? params[6] : false;
+function _shelf_standoffs(params) = len(params) > 7 ? params[7] : [];
 
 // ============================================================================
 // UTILITY FUNCTIONS

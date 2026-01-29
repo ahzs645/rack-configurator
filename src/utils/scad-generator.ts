@@ -153,7 +153,7 @@ function generateDevicesArray(devices: PlacedDevice[]): string {
 
 /**
  * Generate shelf parameters array for OpenSCAD
- * Returns: [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight]
+ * Returns: [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight, solidBottom, standoffs]
  */
 function generateShelfParams(device: PlacedDevice): string {
   const useHoneycomb = device.shelfUseHoneycomb !== false;  // Default true
@@ -162,8 +162,15 @@ function generateShelfParams(device: PlacedDevice): string {
   const screwHoles = device.shelfScrewHoles || 0;
   const cableHolesLeft = device.shelfCableHolesLeft || 0;
   const cableHolesRight = device.shelfCableHolesRight || 0;
+  const solidBottom = device.shelfSolidBottom === true;  // Default false
 
-  return `[${useHoneycomb}, "${notch}", ${notchWidth}, ${screwHoles}, ${cableHolesLeft}, ${cableHolesRight}]`;
+  // Generate standoffs array: [[x, y, height, outerDia, holeDia], ...]
+  const standoffs = device.standoffs || [];
+  const standoffsStr = standoffs.length > 0
+    ? `[${standoffs.map(s => `[${s.x}, ${s.y}, ${s.height}, ${s.outerDia}, ${s.holeDia}]`).join(', ')}]`
+    : '[]';
+
+  return `[${useHoneycomb}, "${notch}", ${notchWidth}, ${screwHoles}, ${cableHolesLeft}, ${cableHolesRight}, ${solidBottom}, ${standoffsStr}]`;
 }
 
 /**

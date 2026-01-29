@@ -135,10 +135,13 @@ export function PropertyPanel() {
     updateDeviceDimensions,
     updateDevicePatchPanelPorts,
     updateDeviceShelfHoneycomb,
+    updateDeviceShelfSolidBottom,
     updateDeviceShelfNotch,
     updateDeviceShelfNotchWidth,
     updateDeviceShelfScrewHoles,
     updateDeviceShelfCableHoles,
+    addDeviceStandoff,
+    removeDeviceStandoff,
     removeDevice,
     moveDeviceToSide,
     setJoinerType,
@@ -515,11 +518,11 @@ export function PropertyPanel() {
             </div>
           </div>
 
-          {/* Mount Type and Back Style (hide for patch_panel) */}
+          {/* Mount Type and Back Style (hide for patch_panel, hide Back for shelf) */}
           {selectedDevice.mountType !== 'patch_panel' && (
             <div className="flex gap-2">
               {/* Mount Type */}
-              <div className="flex-1">
+              <div className={selectedDevice.mountType === 'shelf' ? 'flex-1' : 'flex-1'}>
                 <label className="block text-xs text-gray-400 mb-1">Mount</label>
                 <select
                   value={selectedDevice.mountType}
@@ -544,21 +547,23 @@ export function PropertyPanel() {
                 </select>
               </div>
 
-              {/* Back Style */}
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Back</label>
-                <select
-                  value={selectedDevice.backStyle || config.backStyle}
-                  onChange={(e) => updateDeviceBackStyle(selectedDevice.id, e.target.value as BackStyle)}
-                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                >
-                  {Object.entries(BACK_STYLE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Back Style - Hide for shelf mount type */}
+              {selectedDevice.mountType !== 'shelf' && (
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-400 mb-1">Back</label>
+                  <select
+                    value={selectedDevice.backStyle || config.backStyle}
+                    onChange={(e) => updateDeviceBackStyle(selectedDevice.id, e.target.value as BackStyle)}
+                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {Object.entries(BACK_STYLE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 
@@ -576,16 +581,29 @@ export function PropertyPanel() {
             <div className="space-y-2 border-t border-gray-700 pt-2 mt-2">
               <div className="text-xs font-medium text-gray-400">Shelf Options</div>
 
-              {/* Honeycomb Pattern Toggle */}
+              {/* Solid Bottom Toggle */}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={selectedDevice.shelfUseHoneycomb !== false}
-                  onChange={(e) => updateDeviceShelfHoneycomb(selectedDevice.id, e.target.checked)}
+                  checked={selectedDevice.shelfSolidBottom === true}
+                  onChange={(e) => updateDeviceShelfSolidBottom(selectedDevice.id, e.target.checked)}
                   className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800"
                 />
-                <span className="text-xs text-gray-300">Honeycomb Pattern</span>
+                <span className="text-xs text-gray-300">Solid Bottom</span>
               </label>
+
+              {/* Honeycomb Pattern Toggle (only if not solid bottom) */}
+              {!selectedDevice.shelfSolidBottom && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedDevice.shelfUseHoneycomb !== false}
+                    onChange={(e) => updateDeviceShelfHoneycomb(selectedDevice.id, e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800"
+                  />
+                  <span className="text-xs text-gray-300">Honeycomb Pattern</span>
+                </label>
+              )}
 
               {/* LED Notch Position */}
               <div className="flex items-center gap-2">
@@ -664,6 +682,100 @@ export function PropertyPanel() {
                   max={5}
                 />
                 <span className="text-xs text-gray-300 w-4 text-center">{selectedDevice.shelfCableHolesRight || 0}</span>
+              </div>
+
+              {/* Standoffs/Mounting Points */}
+              <div className="border-t border-gray-600 pt-2 mt-2">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-400">Mounting Standoffs</span>
+                  <button
+                    onClick={() => addDeviceStandoff(selectedDevice.id, {
+                      x: 0,
+                      y: 20,
+                      height: 5,
+                      outerDia: 6,
+                      holeDia: 2.5
+                    })}
+                    className="text-xs px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded"
+                  >
+                    + Add
+                  </button>
+                </div>
+                {(selectedDevice.standoffs || []).length === 0 && (
+                  <div className="text-xs text-gray-500 text-center py-1">
+                    No standoffs added
+                  </div>
+                )}
+                {(selectedDevice.standoffs || []).map((standoff, idx) => (
+                  <div key={idx} className="bg-gray-700 rounded p-2 mb-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-300">Standoff {idx + 1}</span>
+                      <button
+                        onClick={() => removeDeviceStandoff(selectedDevice.id, idx)}
+                        className="text-red-400 hover:text-red-300 text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      <div>
+                        <label className="text-gray-500">X</label>
+                        <input
+                          type="number"
+                          value={standoff.x}
+                          onChange={(e) => {
+                            const newStandoffs = [...(selectedDevice.standoffs || [])];
+                            newStandoffs[idx] = { ...standoff, x: parseFloat(e.target.value) || 0 };
+                            useRackStore.getState().updateDeviceStandoffs(selectedDevice.id, newStandoffs);
+                          }}
+                          className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-gray-500">Y</label>
+                        <input
+                          type="number"
+                          value={standoff.y}
+                          onChange={(e) => {
+                            const newStandoffs = [...(selectedDevice.standoffs || [])];
+                            newStandoffs[idx] = { ...standoff, y: parseFloat(e.target.value) || 0 };
+                            useRackStore.getState().updateDeviceStandoffs(selectedDevice.id, newStandoffs);
+                          }}
+                          className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-gray-500">Height</label>
+                        <input
+                          type="number"
+                          value={standoff.height}
+                          onChange={(e) => {
+                            const newStandoffs = [...(selectedDevice.standoffs || [])];
+                            newStandoffs[idx] = { ...standoff, height: parseFloat(e.target.value) || 5 };
+                            useRackStore.getState().updateDeviceStandoffs(selectedDevice.id, newStandoffs);
+                          }}
+                          className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                          min={1}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-gray-500">Hole Ø</label>
+                        <input
+                          type="number"
+                          value={standoff.holeDia}
+                          onChange={(e) => {
+                            const newStandoffs = [...(selectedDevice.standoffs || [])];
+                            newStandoffs[idx] = { ...standoff, holeDia: parseFloat(e.target.value) || 2.5 };
+                            useRackStore.getState().updateDeviceStandoffs(selectedDevice.id, newStandoffs);
+                          }}
+                          className="w-full px-1 py-0.5 bg-gray-600 border border-gray-500 rounded text-white"
+                          min={1}
+                          step={0.5}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

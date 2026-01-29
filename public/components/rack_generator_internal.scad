@@ -426,6 +426,7 @@ module _rg_device_mount(
             depth = dev_d,
             device_h = dev_h,
             thickness = 3,
+            solid_bottom = _shelf_solid_bottom(shelf_params),
             use_honeycomb = _shelf_use_honeycomb(shelf_params),
             hex_dia = hex_dia,
             hex_wall = hex_wall,
@@ -438,6 +439,7 @@ module _rg_device_mount(
             cable_holes_right = _shelf_cable_right(shelf_params),
             cable_hole_dia = 8,
             top_support_depth = 20,
+            standoffs = _shelf_standoffs(shelf_params),
             plate_thick = plate_thick
         );
     }

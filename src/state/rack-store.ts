@@ -12,6 +12,7 @@ import type {
   JoinerNutSide,
   JoinerScrewType,
   ShelfNotch,
+  StandoffConfig,
 } from './types';
 import { DEFAULT_RACK_CONFIG, getToollessHookCount } from './types';
 
@@ -78,10 +79,15 @@ interface RackStore {
   updateDevicePatchPanelPorts: (id: string, ports: number) => void;
   // Shelf-specific updates
   updateDeviceShelfHoneycomb: (id: string, useHoneycomb: boolean) => void;
+  updateDeviceShelfSolidBottom: (id: string, solidBottom: boolean) => void;
   updateDeviceShelfNotch: (id: string, notch: ShelfNotch) => void;
   updateDeviceShelfNotchWidth: (id: string, width: number) => void;
   updateDeviceShelfScrewHoles: (id: string, count: number) => void;
   updateDeviceShelfCableHoles: (id: string, left: number, right: number) => void;
+  // Standoff updates (can be used on multiple mount types)
+  updateDeviceStandoffs: (id: string, standoffs: StandoffConfig[]) => void;
+  addDeviceStandoff: (id: string, standoff: StandoffConfig) => void;
+  removeDeviceStandoff: (id: string, index: number) => void;
   moveDeviceToSide: (id: string, side: 'left' | 'right' | 'main') => void;
   selectDevice: (id: string | null) => void;
   clearDevices: () => void;
@@ -639,6 +645,22 @@ export const useRackStore = create<RackStore>((set, get) => ({
       },
     })),
 
+  updateDeviceShelfSolidBottom: (id, solidBottom) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, shelfSolidBottom: solidBottom } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, shelfSolidBottom: solidBottom } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, shelfSolidBottom: solidBottom } : d
+        ),
+      },
+    })),
+
   updateDeviceShelfNotch: (id, notch) =>
     set((state) => ({
       config: {
@@ -702,6 +724,53 @@ export const useRackStore = create<RackStore>((set, get) => ({
         ),
       },
     })),
+
+  // Standoff updates
+  updateDeviceStandoffs: (id, standoffs) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        devices: state.config.devices.map((d) =>
+          d.id === id ? { ...d, standoffs } : d
+        ),
+        leftDevices: state.config.leftDevices.map((d) =>
+          d.id === id ? { ...d, standoffs } : d
+        ),
+        rightDevices: state.config.rightDevices.map((d) =>
+          d.id === id ? { ...d, standoffs } : d
+        ),
+      },
+    })),
+
+  addDeviceStandoff: (id, standoff) =>
+    set((state) => {
+      const updateDevice = (d: PlacedDevice) =>
+        d.id === id ? { ...d, standoffs: [...(d.standoffs || []), standoff] } : d;
+      return {
+        config: {
+          ...state.config,
+          devices: state.config.devices.map(updateDevice),
+          leftDevices: state.config.leftDevices.map(updateDevice),
+          rightDevices: state.config.rightDevices.map(updateDevice),
+        },
+      };
+    }),
+
+  removeDeviceStandoff: (id, index) =>
+    set((state) => {
+      const updateDevice = (d: PlacedDevice) =>
+        d.id === id
+          ? { ...d, standoffs: (d.standoffs || []).filter((_, i) => i !== index) }
+          : d;
+      return {
+        config: {
+          ...state.config,
+          devices: state.config.devices.map(updateDevice),
+          leftDevices: state.config.leftDevices.map(updateDevice),
+          rightDevices: state.config.rightDevices.map(updateDevice),
+        },
+      };
+    }),
 
   moveDeviceToSide: (id, side) =>
     set((state) => {
