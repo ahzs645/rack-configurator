@@ -896,7 +896,8 @@ module enhanced_shelf(
     top_support_depth = 20
 ) {
     // Calculate derived dimensions
-    inner_width = width - thickness * 2;
+    // inner_width is now the full width since walls are moved outside
+    inner_width = width;
     top_thickness = min(height * 0.5, 7);  // Top beam thickness
 
     difference() {
@@ -907,12 +908,14 @@ module enhanced_shelf(
             if (use_honeycomb) {
                 linear_extrude(thickness) {
                     honey_shape(thickness, hex_dia, hex_wall) {
-                        square([width, depth]);
+                        translate([-thickness, 0])
+                        square([width + 2*thickness, depth]);
                     }
                 }
             } else {
                 // Rectangular slot ventilation
-                _shelf_rect_vent_base(width, depth, thickness);
+                translate([-thickness, 0, 0])
+                _shelf_rect_vent_base(width + 2*thickness, depth, thickness);
             }
 
             // ============================================
@@ -920,9 +923,9 @@ module enhanced_shelf(
             // ============================================
             for (side = [0, 1]) {
                 // Adjust x_offset to account for -X extrusion after rotation
-                // Side 0: translate to thickness -> extends to 0
-                // Side 1: translate to width -> extends to width-thickness
-                x_offset = side == 0 ? thickness : width;
+                // Side 0 (Left): 0 -> extends to -thickness
+                // Side 1 (Right): width + thickness -> extends to width
+                x_offset = side == 0 ? 0 : width + thickness;
                 
                 translate([x_offset, 0, thickness]) {
                     if (use_honeycomb) {
@@ -956,8 +959,8 @@ module enhanced_shelf(
             // ============================================
             // Top support beam (positioned at top, under shelf plate)
             // ============================================
-            translate([0, 0, thickness]) {
-                cube([width, top_support_depth, top_thickness]);
+            translate([-thickness, 0, thickness]) {
+                cube([width + 2*thickness, top_support_depth, top_thickness]);
             }
 
             // ============================================
@@ -966,7 +969,7 @@ module enhanced_shelf(
             _shelf_support_triangle_length = min(height * 0.8, depth * 0.3);
             for (side = [0, 1]) {
                 // Same x_offset adjustment as side walls
-                x_offset = side == 0 ? thickness : width;
+                x_offset = side == 0 ? 0 : width + thickness;
                 
                 translate([x_offset, 0, thickness]) {
                     rotate([0, -90, 0])
@@ -1022,7 +1025,8 @@ module enhanced_shelf(
         if (cable_holes_left > 0) {
             spacing = (depth - 20) / (cable_holes_left + 1);
             for (i = [1 : cable_holes_left]) {
-                translate([-_CM_EPS, 10 + i * spacing, height / 2])
+                // Move to -thickness to cut through the left wall
+                translate([-thickness -_CM_EPS, 10 + i * spacing, height / 2])
                 rotate([0, 90, 0])
                 cylinder(h = thickness + 2*_CM_EPS, d = cable_hole_dia, $fn = 24);
             }
@@ -1034,7 +1038,8 @@ module enhanced_shelf(
         if (cable_holes_right > 0) {
             spacing = (depth - 20) / (cable_holes_right + 1);
             for (i = [1 : cable_holes_right]) {
-                translate([width - thickness - _CM_EPS, 10 + i * spacing, height / 2])
+                // Move to width to cut through the right wall
+                translate([width - _CM_EPS, 10 + i * spacing, height / 2])
                 rotate([0, 90, 0])
                 cylinder(h = thickness + 2*_CM_EPS, d = cable_hole_dia, $fn = 24);
             }
