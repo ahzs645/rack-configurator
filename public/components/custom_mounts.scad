@@ -920,17 +920,18 @@ module enhanced_shelf(
             // ============================================
             for (side = [0, 1]) {
                 x_offset = side * (width - thickness);
-                translate([x_offset, -height, 0]) {
+                translate([x_offset, 0, thickness]) {
                     if (use_honeycomb) {
                         rotate([0, -90, 0])
                         linear_extrude(thickness) {
                             honey_shape(thickness, hex_dia, hex_wall) {
                                 // Trapezoidal side wall profile - extends downward from shelf
+                                // U=Height(Z), V=Depth(Y). Positive Z maps to Down in Rack.
                                 polygon([
-                                    [0, height],
                                     [0, 0],
-                                    [top_support_depth, 0],
-                                    [depth, height]
+                                    [0, depth],
+                                    [height, top_support_depth],
+                                    [height, 0]
                                 ]);
                             }
                         }
@@ -938,10 +939,10 @@ module enhanced_shelf(
                         rotate([0, -90, 0])
                         linear_extrude(thickness) {
                             polygon([
-                                [0, height],
                                 [0, 0],
-                                [top_support_depth, 0],
-                                [depth, height]
+                                [0, depth],
+                                [height, top_support_depth],
+                                [height, 0]
                             ]);
                         }
                     }
@@ -951,8 +952,8 @@ module enhanced_shelf(
             // ============================================
             // Top support beam (now at bottom since walls extend down)
             // ============================================
-            translate([0, -height, 0]) {
-                cube([width, top_thickness, top_support_depth]);
+            translate([0, 0, thickness + height - top_thickness]) {
+                cube([width, top_support_depth, top_thickness]);
             }
 
             // ============================================
@@ -961,13 +962,13 @@ module enhanced_shelf(
             _shelf_support_triangle_length = min(height * 0.8, depth * 0.3);
             for (side = [0, 1]) {
                 x_offset = side * (width - thickness);
-                translate([x_offset, -_shelf_support_triangle_length, 0]) {
+                translate([x_offset, 0, thickness]) {
                     rotate([0, -90, 0])
                     linear_extrude(thickness) {
                         polygon([
-                            [0, _shelf_support_triangle_length],
                             [0, 0],
-                            [_shelf_support_triangle_length, _shelf_support_triangle_length]
+                            [0, _shelf_support_triangle_length],
+                            [_shelf_support_triangle_length, 0]
                         ]);
                     }
                 }
