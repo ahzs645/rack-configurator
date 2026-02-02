@@ -28,7 +28,7 @@ const EAR_WIDTH = (RACK_CONSTANTS.FACEPLATE_WIDTH - RACK_CONSTANTS.PANEL_WIDTH) 
 const SPLIT_MARGIN = 10; // mm on each side of split line
 const CAGE_WALL_THICKNESS = 6; // max cage wall thickness (heavy_device=2)
 
-// Hook dimensions from OpenSCAD backplate_profile (rack_ears.scad)
+// Hook dimensions from backplate_profile (rack-ears module)
 // The hook profile: X range -12.1 to 0 (12.1mm), Y range 2.25 to 32.65 (30.4mm)
 const HOOK_HEIGHT = 30.4; // mm - total height of the hook profile
 
@@ -58,7 +58,7 @@ function RackEar({ side, rackBounds, earStyle, earPosition, hookPattern, rackU, 
   const renderToollessHookAtPosition = (hookIndex: number) => {
     const s = (mm: number) => rackSizeToSvg(mm, view);
     const dir = side === 'left' ? -1 : 1;
-    const maxY = 32.65; // Top of hook in OpenSCAD coords
+    const maxY = 32.65; // Top of hook in model coords
 
     // Calculate Y position for this hook
     // Hooks are positioned from bottom, so index 0 is at bottom
@@ -68,7 +68,7 @@ function RackEar({ side, rackBounds, earStyle, earPosition, hookPattern, rackU, 
     const hookY = rackBounds.y + rackBounds.height - hookHeightPx - hookOffsetFromBottomPx;
 
     // Exact backplate_profile polygon points, converted to SVG coordinates
-    // OpenSCAD: Y increases up, X=0 is panel edge, negative X extends outward
+    // Model coords: Y increases up, X=0 is panel edge, negative X extends outward
     // SVG: Y increases down, we flip Y and mirror X based on side
     const points = [
       // Start at A, go through polygon

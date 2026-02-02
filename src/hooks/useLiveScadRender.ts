@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRackStore } from '../state/rack-store';
-import { generateScadCode } from '../utils/scad-generator';
 import { initializeWorker, renderScad, isWorkerReady } from '../worker/openscad-runner';
 import type { RackConfig } from '../state/types';
 
@@ -76,16 +75,12 @@ export function useLiveScadRender(): LiveRenderState {
         await initializeWorker();
       }
 
-      // Generate SCAD code with preview disabled (for cleaner geometry)
-      const scadCode = generateScadCode(currentConfig, false);
-
       const startTime = performance.now();
 
-      // Render to STL
+      // Send config directly to JSCAD worker (no code generation needed)
       const result = await renderScad({
-        scadCode,
+        config: currentConfig,
         outputFormat: 'stl',
-        variables: { '$preview': true },
       });
 
       const renderTime = Math.round(performance.now() - startTime);

@@ -1,26 +1,20 @@
-// Types for OpenSCAD Worker communication
+// Types for JSCAD Worker communication
 
-export interface OpenSCADInvocation {
-  // The SCAD code to render
-  scadCode: string;
-  // Output format: 'stl' | 'off' | 'glb'
-  outputFormat: 'stl' | 'off';
-  // Variables to pass to OpenSCAD (e.g., { '$preview': true })
-  variables?: Record<string, unknown>;
-  // Features to enable
-  features?: string[];
+import type { RackConfig } from '../state/types';
+
+export interface JscadInvocation {
+  // The rack configuration to render
+  config: RackConfig;
+  // Output format
+  outputFormat: 'stl';
 }
 
-export interface OpenSCADResult {
+export interface JscadResult {
   success: boolean;
-  // The output file (STL binary or error text)
+  // The output file (STL binary)
   output?: ArrayBuffer;
   // Error message if failed
   error?: string;
-  // Stdout from OpenSCAD
-  stdout?: string;
-  // Stderr from OpenSCAD
-  stderr?: string;
   // Render time in ms
   renderTime?: number;
 }
@@ -28,11 +22,15 @@ export interface OpenSCADResult {
 export interface WorkerMessage {
   type: 'invoke' | 'init' | 'cancel';
   id: string;
-  payload?: OpenSCADInvocation;
+  payload?: JscadInvocation;
 }
 
 export interface WorkerResponse {
   type: 'ready' | 'progress' | 'result' | 'error';
   id?: string;
-  payload?: OpenSCADResult | string;
+  payload?: JscadResult | string;
 }
+
+// Legacy aliases for compatibility
+export type OpenSCADInvocation = JscadInvocation;
+export type OpenSCADResult = JscadResult;

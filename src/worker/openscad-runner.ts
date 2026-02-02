@@ -1,9 +1,10 @@
-// OpenSCAD Runner - Manages the Web Worker from the main thread
+// JSCAD Runner - Manages the Web Worker from the main thread
+// (file kept as openscad-runner.ts for minimal import changes, but now uses JSCAD)
 
-import type { WorkerMessage, WorkerResponse, OpenSCADInvocation, OpenSCADResult } from './types';
+import type { WorkerMessage, WorkerResponse, JscadInvocation, JscadResult } from './types';
 
 type StatusCallback = (status: string) => void;
-type ResultCallback = (result: OpenSCADResult) => void;
+type ResultCallback = (result: JscadResult) => void;
 
 let worker: Worker | null = null;
 let isInitialized = false;
@@ -28,9 +29,11 @@ export async function initializeWorker(): Promise<void> {
 
   initPromise = new Promise((resolve, reject) => {
     try {
-      // Create the worker from the public folder (plain JS, no bundling needed)
-      // Use import.meta.env.BASE_URL to support deployment to subdirectories (e.g., GitHub Pages)
-      worker = new Worker(`${import.meta.env.BASE_URL}openscad-worker.js`);
+      // Create the worker using Vite's worker import pattern
+      worker = new Worker(
+        new URL('./jscad-worker.ts', import.meta.url),
+        { type: 'module' }
+      );
 
       // Handle messages from the worker
       worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
@@ -52,7 +55,7 @@ export async function initializeWorker(): Promise<void> {
             if (id && pendingRequests.has(id)) {
               const { resolve: resultResolve } = pendingRequests.get(id)!;
               pendingRequests.delete(id);
-              resultResolve(payload as OpenSCADResult);
+              resultResolve(payload as JscadResult);
             }
             break;
 
@@ -82,8 +85,8 @@ export async function initializeWorker(): Promise<void> {
   return initPromise;
 }
 
-// Render SCAD code to STL
-export async function renderScad(invocation: OpenSCADInvocation): Promise<OpenSCADResult> {
+// Render using JSCAD
+export async function renderScad(invocation: JscadInvocation): Promise<JscadResult> {
   if (!worker || !isInitialized) {
     await initializeWorker();
   }

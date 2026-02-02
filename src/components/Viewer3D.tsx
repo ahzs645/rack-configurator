@@ -235,7 +235,7 @@ export function Viewer3D() {
         side: THREE.DoubleSide,
       });
       const mesh = new THREE.Mesh(stlGeometry, material);
-      // Rotate to correct orientation (OpenSCAD Y-up to Three.js Y-up)
+      // Rotate to correct orientation (JSCAD Z-up to Three.js Y-up)
       mesh.rotation.x = -Math.PI / 2;
       // For 2D view, also rotate to show front face
       if (is2D) {

@@ -4,7 +4,7 @@ import type { RackConfig } from '../state/types';
 import type { EarStyle, EarPosition } from '../state/types';
 import { EAR_STYLE_LABELS, getToollessHookCount } from '../state/types';
 import { ToollessHooksModal } from './ToollessHooksModal';
-import { downloadScadFile, downloadConfigJson, generateScadCode, generateScadCodeForSide, downloadStl, downloadSplitStlZip } from '../utils/scad-generator';
+import { downloadScadFile, downloadConfigJson, downloadStl, downloadSplitStlZip } from '../utils/scad-generator';
 import { downloadBundledScadFile } from '../utils/scad-bundler';
 import { AdvancedSettingsModal } from './AdvancedSettingsModal';
 import { RecentRacks } from './RecentRacks';
@@ -120,14 +120,10 @@ export function RackToolbar() {
 
       setRenderStatus('Rendering STL...');
 
-      // Generate SCAD code
-      const scadCode = generateScadCode(config, false);
-
-      // Render to STL
+      // Render to STL using JSCAD
       const result = await renderScad({
-        scadCode,
+        config,
         outputFormat: 'stl',
-        variables: { '$preview': false },
       });
 
       if (result.success && result.output) {
@@ -168,14 +164,11 @@ export function RackToolbar() {
 
       setRenderStatus(`Rendering ${side} side STL...`);
 
-      // Generate SCAD code for specific side
-      const scadCode = generateScadCodeForSide(config, side);
-
-      // Render to STL
+      // Render specific side to STL using JSCAD
+      const renderMode = side === 'left' ? 'left_print' : 'right_print';
       const result = await renderScad({
-        scadCode,
+        config: { ...config, renderMode } as typeof config,
         outputFormat: 'stl',
-        variables: { '$preview': false },
       });
 
       if (result.success && result.output) {
@@ -216,11 +209,9 @@ export function RackToolbar() {
 
       // Render left side
       setRenderStatus('Rendering left side STL...');
-      const leftScadCode = generateScadCodeForSide(config, 'left');
       const leftResult = await renderScad({
-        scadCode: leftScadCode,
+        config: { ...config, renderMode: 'left_print' as const },
         outputFormat: 'stl',
-        variables: { '$preview': false },
       });
 
       if (!leftResult.success || !leftResult.output) {
@@ -229,11 +220,9 @@ export function RackToolbar() {
 
       // Render right side
       setRenderStatus('Rendering right side STL...');
-      const rightScadCode = generateScadCodeForSide(config, 'right');
       const rightResult = await renderScad({
-        scadCode: rightScadCode,
+        config: { ...config, renderMode: 'right_print' as const },
         outputFormat: 'stl',
-        variables: { '$preview': false },
       });
 
       if (!rightResult.success || !rightResult.output) {
@@ -576,7 +565,7 @@ export function RackToolbar() {
                 className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
               >
                 <span className="font-medium text-white">STL (3D Print Ready)</span>
-                <span className="text-xs text-gray-500">Renders via WebAssembly</span>
+                <span className="text-xs text-gray-500">Renders via JSCAD</span>
               </button>
             )}
             <div className="border-t border-gray-700 my-1" />
@@ -584,15 +573,15 @@ export function RackToolbar() {
               onClick={handleExportScad}
               className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
             >
-              <span className="font-medium text-white">SCAD (requires components)</span>
-              <span className="text-xs text-gray-500">Needs components/ folder</span>
+              <span className="font-medium text-white">JSCAD Script</span>
+              <span className="text-xs text-gray-500">JavaScript configuration file</span>
             </button>
             <button
               onClick={handleExportBundledScad}
               className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex flex-col"
             >
-              <span className="font-medium text-white">SCAD (self-contained)</span>
-              <span className="text-xs text-gray-500">All code inlined - works anywhere</span>
+              <span className="font-medium text-white">Config (JSON)</span>
+              <span className="text-xs text-gray-500">Self-contained configuration export</span>
             </button>
             <div className="border-t border-gray-700 my-1" />
             <button
