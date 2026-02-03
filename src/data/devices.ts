@@ -66,7 +66,7 @@ export const DEVICES: RackDevice[] = [
   { id: 'netgear_gs108', name: 'Netgear GS108', category: 'network', width: 158, height: 27, depth: 101 },
 
   // KVM / Remote Management
-  { id: 'jetkvm', name: 'JetKVM', category: 'kvm', width: 43, height: 31, depth: 60 },
+  { id: 'jetkvm', name: 'JetKVM', category: 'kvm', width: 43, height: 31, depth: 45 },
   { id: 'pikvm_v4_plus', name: 'PiKVM V4 Plus', category: 'kvm', width: 91, height: 37, depth: 63 },
   { id: 'pikvm_v4_mini', name: 'PiKVM V4 Mini', category: 'kvm', width: 68, height: 23, depth: 68 },
   { id: 'tinypilot_voyager2', name: 'TinyPilot Voyager 2', category: 'kvm', width: 83, height: 30, depth: 85 },

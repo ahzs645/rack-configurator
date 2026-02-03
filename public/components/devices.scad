@@ -59,7 +59,7 @@ DEVICES = [
     // -------------------------------------------------------------------------
     // KVM / Remote Management
     // -------------------------------------------------------------------------
-    ["jetkvm",               [43, 31, 60],    "JetKVM",                  "kvm"],
+    ["jetkvm",               [43, 31, 45],    "JetKVM",                  "kvm"],
     ["pikvm_v4_plus",        [91, 37, 63],    "PiKVM V4 Plus",           "kvm"],
     ["pikvm_v4_mini",        [68, 23, 68],    "PiKVM V4 Mini",           "kvm"],
     ["tinypilot_voyager2",   [83, 30, 85],    "TinyPilot Voyager 2",     "kvm"],
