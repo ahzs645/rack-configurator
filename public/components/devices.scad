@@ -36,6 +36,7 @@ DEVICES = [
     ["beelink_ser5",         [126, 42, 113],  "Beelink SER5",            "mini_pc"],
     ["beelink_eq12",         [115, 42, 102],  "Beelink EQ12",            "mini_pc"],
     ["geekom_mini_it13",     [117, 37, 112],  "GEEKOM Mini IT13",        "mini_pc"],
+    ["minisforum_ai_x1",     [127.5, 54, 125.5],  "Minisforum AI X1",        "mini_pc"],
 
     // -------------------------------------------------------------------------
     // Network Equipment - Ubiquiti
@@ -89,7 +90,7 @@ DEVICES = [
     // -------------------------------------------------------------------------
     // Single Board Computers
     // -------------------------------------------------------------------------
-    ["raspberry_pi_5",       [85, 17, 56],    "Raspberry Pi 5",          "sbc"],
+    ["raspberry_pi_5",       [66, 23.85, 97],    "Raspberry Pi 5",          "sbc"],
     ["raspberry_pi_5_case",  [93, 64, 35],    "Raspberry Pi 5 (Case)",   "sbc"],
     ["raspberry_pi_4",       [85, 17, 56],    "Raspberry Pi 4",          "sbc"],
     ["raspberry_pi_zero_2w", [65, 5, 30],     "Raspberry Pi Zero 2 W",   "sbc"],

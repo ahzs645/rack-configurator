@@ -49,6 +49,7 @@ export const DEVICES: RackDevice[] = [
   { id: 'beelink_ser5', name: 'Beelink SER5', category: 'mini_pc', width: 126, height: 42, depth: 113 },
   { id: 'beelink_eq12', name: 'Beelink EQ12', category: 'mini_pc', width: 115, height: 42, depth: 102 },
   { id: 'geekom_mini_it13', name: 'GEEKOM Mini IT13', category: 'mini_pc', width: 117, height: 37, depth: 112 },
+  { id: 'minisforum_ai_x1', name: 'Minisforum AI X1', category: 'mini_pc', width: 127.5, height: 54, depth: 125.5 },
 
   // Network Equipment - Ubiquiti
   { id: 'ucg_fiber', name: 'Ubiquiti UCG-Fiber', category: 'network', width: 213, height: 30, depth: 128 },
@@ -90,7 +91,7 @@ export const DEVICES: RackDevice[] = [
   { id: 'zooz_zst10', name: 'Zooz ZST10 Z-Wave', category: 'coordinator', width: 20, height: 9, depth: 50, allowedMountTypes: ['passthrough', 'none'] },
 
   // Single Board Computers
-  { id: 'raspberry_pi_5', name: 'Raspberry Pi 5', category: 'sbc', width: 85, height: 17, depth: 56 },
+  { id: 'raspberry_pi_5', name: 'Raspberry Pi 5', category: 'sbc', width: 66, height: 23.85, depth: 97 },
   { id: 'raspberry_pi_5_case', name: 'Raspberry Pi 5 (Case Mount)', category: 'sbc', width: 93, height: 64, depth: 35, allowedMountTypes: ['pi5_case', 'none'] },
   { id: 'raspberry_pi_4', name: 'Raspberry Pi 4', category: 'sbc', width: 85, height: 17, depth: 56 },
   { id: 'raspberry_pi_zero_2w', name: 'Raspberry Pi Zero 2 W', category: 'sbc', width: 65, height: 5, depth: 30 },
