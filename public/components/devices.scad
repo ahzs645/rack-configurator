@@ -79,7 +79,7 @@ DEVICES = [
     // Zigbee / Z-Wave Coordinators
     // -------------------------------------------------------------------------
     ["slzb_06",              [23.4, 20, 90],  "SLZB-06 Zigbee",          "coordinator"],
-    ["slzb_06m",             [35, 25, 70],    "SLZB-06M Zigbee",         "coordinator"],
+    ["slzb_06m",             [23.4, 20, 16.2],    "SLZB-06M Zigbee",         "coordinator"],
     ["sonoff_zbdongle_p",    [25, 15, 80],    "Sonoff ZBDongle-P",       "coordinator"],
     ["sonoff_zbdongle_e",    [26, 13, 80],    "Sonoff ZBDongle-E",       "coordinator"],
     ["conbee_ii",            [22, 6, 70],     "ConBee II",               "coordinator"],

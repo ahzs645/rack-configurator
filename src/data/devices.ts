@@ -82,7 +82,7 @@ export const DEVICES: RackDevice[] = [
 
   // Zigbee / Z-Wave Coordinators (passthrough only - these are small USB-style devices)
   { id: 'slzb_06', name: 'SLZB-06 Zigbee', category: 'coordinator', width: 23.4, height: 20, depth: 90, allowedMountTypes: ['passthrough', 'none'] },
-  { id: 'slzb_06m', name: 'SLZB-06M Zigbee', category: 'coordinator', width: 35, height: 25, depth: 70, allowedMountTypes: ['passthrough', 'none'] },
+  { id: 'slzb_06m', name: 'SLZB-06M Zigbee', category: 'coordinator', width: 23.4, height: 20, depth: 16.2, allowedMountTypes: ['passthrough', 'none'] },
   { id: 'sonoff_zbdongle_p', name: 'Sonoff ZBDongle-P', category: 'coordinator', width: 25, height: 15, depth: 80, allowedMountTypes: ['passthrough', 'none'] },
   { id: 'sonoff_zbdongle_e', name: 'Sonoff ZBDongle-E', category: 'coordinator', width: 26, height: 13, depth: 80, allowedMountTypes: ['passthrough', 'none'] },
   { id: 'conbee_ii', name: 'ConBee II', category: 'coordinator', width: 22, height: 6, depth: 70, allowedMountTypes: ['passthrough', 'none'] },
