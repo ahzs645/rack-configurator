@@ -11,6 +11,7 @@ import type { RackDevice } from './data/devices';
 import { getDevice } from './data/devices';
 import { getPlacedDeviceDimensions, parseConfigJson } from './utils/scad-generator';
 import { clampToRackBounds, calculateFitScale } from './utils/coordinates';
+import { loadConfigFromUrl, clearUrlConfig } from './utils/url-sharing';
 import type { RackConfig } from './state/types';
 
 type MainViewMode = '2d' | '3d';
@@ -156,6 +157,16 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  // Load config from URL on mount
+  useEffect(() => {
+    loadConfigFromUrl().then((urlConfig) => {
+      if (urlConfig) {
+        loadConfig(urlConfig);
+        clearUrlConfig();
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sensors for drag-and-drop
   const sensors = useSensors(

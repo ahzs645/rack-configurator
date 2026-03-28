@@ -10,6 +10,7 @@ import { AdvancedSettingsModal } from './AdvancedSettingsModal';
 import { RecentRacks } from './RecentRacks';
 import { saveRecentRack } from '../utils/recent-racks-db';
 import { initializeWorker, renderScad, setStatusCallback, isWorkerReady } from '../worker/openscad-runner';
+import { generateShareUrl } from '../utils/url-sharing';
 
 export function RackToolbar() {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -261,6 +262,18 @@ export function RackToolbar() {
     setTimeout(() => setRenderStatus(null), 2000);
   };
 
+  const handleShare = async () => {
+    try {
+      const url = await generateShareUrl(config);
+      await navigator.clipboard.writeText(url);
+      setRenderStatus('Share link copied to clipboard!');
+    } catch (e) {
+      console.error('Failed to generate share URL:', e);
+      setRenderStatus('Error: Failed to generate share link');
+    }
+    setTimeout(() => setRenderStatus(null), 3000);
+  };
+
   return (
     <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center gap-4 flex-wrap relative">
       {/* Rack Size */}
@@ -500,6 +513,18 @@ export function RackToolbar() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
         </svg>
         Open
+      </button>
+
+      {/* Share */}
+      <button
+        onClick={handleShare}
+        className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-sm rounded transition-colors flex items-center gap-1"
+        title="Copy shareable link to clipboard"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+        </svg>
+        Share
       </button>
 
       {/* Export */}
