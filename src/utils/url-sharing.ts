@@ -17,10 +17,30 @@ export async function generateShareUrl(config: RackConfig): Promise<string> {
 
 /**
  * Try to extract and decompress a RackConfig from the current page URL.
- * Returns null if no config is present or if decompression fails.
+ * Also supports loading from a remote JSON URL via ?url= parameter.
+ * Returns null if no config is present or if decompression/fetch fails.
  */
 export async function loadConfigFromUrl(): Promise<RackConfig | null> {
   const params = new URLSearchParams(window.location.search);
+
+  // Check for remote JSON URL first (?url=<json_url>)
+  const jsonUrl = params.get('url');
+  if (jsonUrl) {
+    try {
+      const response = await fetch(jsonUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const config = await response.json() as RackConfig;
+      if (config && typeof config.rackU === 'number' && Array.isArray(config.devices)) {
+        return config;
+      }
+      return null;
+    } catch (e) {
+      console.error('Failed to load config from URL:', e);
+      return null;
+    }
+  }
+
+  // Fall back to compressed config (?c=<compressed>)
   const compressed = params.get('c');
   if (!compressed) return null;
 
@@ -43,5 +63,6 @@ export async function loadConfigFromUrl(): Promise<RackConfig | null> {
 export function clearUrlConfig(): void {
   const url = new URL(window.location.href);
   url.searchParams.delete('c');
+  url.searchParams.delete('url');
   window.history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
 }
