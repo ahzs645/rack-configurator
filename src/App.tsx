@@ -6,7 +6,9 @@ import { RackConfigurator } from './components/RackConfigurator';
 import { RackToolbar } from './components/RackToolbar';
 import { PropertyPanel } from './components/PropertyPanel';
 import { MainViewer3D } from './components/MainViewer3D';
+import { MobileLayout } from './components/MobileLayout';
 import { useRackStore } from './state/rack-store';
+import { useIsMobile } from './hooks/useMediaQuery';
 import type { RackDevice } from './data/devices';
 import { getDevice } from './data/devices';
 import { getPlacedDeviceDimensions, parseConfigJson } from './utils/scad-generator';
@@ -28,7 +30,7 @@ function DragPreview({ device }: { device: RackDevice }) {
   );
 }
 
-function App() {
+function DesktopLayout() {
   const {
     config,
     selectedDeviceId,
@@ -157,16 +159,6 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
-
-  // Load config from URL on mount
-  useEffect(() => {
-    loadConfigFromUrl().then((urlConfig) => {
-      if (urlConfig) {
-        loadConfig(urlConfig);
-        clearUrlConfig();
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sensors for drag-and-drop
   const sensors = useSensors(
@@ -392,6 +384,27 @@ function App() {
       </DragOverlay>
     </DndContext>
   );
+}
+
+function App() {
+  const isMobile = useIsMobile();
+  const { loadConfig } = useRackStore();
+
+  // Load config from URL on mount
+  useEffect(() => {
+    loadConfigFromUrl().then((urlConfig) => {
+      if (urlConfig) {
+        loadConfig(urlConfig);
+        clearUrlConfig();
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (isMobile) {
+    return <MobileLayout />;
+  }
+
+  return <DesktopLayout />;
 }
 
 export default App;

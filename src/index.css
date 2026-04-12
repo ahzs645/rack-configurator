@@ -14,3 +14,37 @@ html, body {
 #root {
   min-height: 100vh;
 }
+
+/* Mobile sheet slide-up animation */
+.mobile-sheet-enter {
+  animation: sheet-slide-up 0.3s ease-out;
+}
+
+@keyframes sheet-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Safe area padding for notched devices */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile property panel overrides - remove fixed width/height constraints */
+@media (max-width: 768px) {
+  .mobile-property-panel > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    border: none !important;
+    flex-shrink: unset !important;
+  }
+}
