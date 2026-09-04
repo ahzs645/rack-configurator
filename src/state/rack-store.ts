@@ -120,6 +120,25 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
+/**
+ * Return the config with a new device appended to the correct list.
+ * In split mode the main `devices` list is never rendered or exported, so a
+ * device added without an explicit side is routed to left/right based on its
+ * X position relative to the split line (same rule as updateDevicePosition).
+ */
+function appendDevice(
+  config: RackConfig,
+  device: PlacedDevice,
+  side?: 'left' | 'right'
+): RackConfig {
+  if (config.isSplit) {
+    const resolvedSide = side ?? (device.offsetX < config.splitPosition ? 'left' : 'right');
+    const listKey = resolvedSide === 'left' ? 'leftDevices' : 'rightDevices';
+    return { ...config, [listKey]: [...config[listKey], device] };
+  }
+  return { ...config, devices: [...config.devices, device] };
+}
+
 export const useRackStore = create<RackStore>((set, get) => ({
   // Initial state
   config: { ...DEFAULT_RACK_CONFIG },
@@ -427,27 +446,10 @@ export const useRackStore = create<RackStore>((set, get) => ({
       offsetY: snappedY,
       mountType,
     };
-    set((state) => {
-      if (state.config.isSplit && side) {
-        // Add to specific side in split mode
-        const listKey = side === 'left' ? 'leftDevices' : 'rightDevices';
-        return {
-          config: {
-            ...state.config,
-            [listKey]: [...state.config[listKey], newDevice],
-          },
-          selectedDeviceId: id,
-        };
-      }
-      // Add to main devices list
-      return {
-        config: {
-          ...state.config,
-          devices: [...state.config.devices, newDevice],
-        },
-        selectedDeviceId: id,
-      };
-    });
+    set((state) => ({
+      config: appendDevice(state.config, newDevice, side),
+      selectedDeviceId: id,
+    }));
     return id;
   },
 
@@ -470,25 +472,10 @@ export const useRackStore = create<RackStore>((set, get) => ({
       customHeight: height,
       customDepth: depth,
     };
-    set((state) => {
-      if (state.config.isSplit && side) {
-        const listKey = side === 'left' ? 'leftDevices' : 'rightDevices';
-        return {
-          config: {
-            ...state.config,
-            [listKey]: [...state.config[listKey], newDevice],
-          },
-          selectedDeviceId: id,
-        };
-      }
-      return {
-        config: {
-          ...state.config,
-          devices: [...state.config.devices, newDevice],
-        },
-        selectedDeviceId: id,
-      };
-    });
+    set((state) => ({
+      config: appendDevice(state.config, newDevice, side),
+      selectedDeviceId: id,
+    }));
     return id;
   },
 
@@ -912,11 +899,23 @@ export const useRackStore = create<RackStore>((set, get) => ({
   loadConfig: (config) => {
     // Migrate old configs that don't have toollessHookPattern or toollessHookTrimPattern
     const hookCount = getToollessHookCount(config.rackU);
-    const migratedConfig = {
+    let migratedConfig: RackConfig = {
       ...config,
+      devices: config.devices || [],
+      leftDevices: config.leftDevices || [],
+      rightDevices: config.rightDevices || [],
       toollessHookPattern: config.toollessHookPattern || Array(hookCount).fill(true),
       toollessHookTrimPattern: config.toollessHookTrimPattern || Array(hookCount).fill(false),
     };
+    // Split configs saved with devices stranded in the main list (older bug):
+    // move them to the correct side so they show up and get exported.
+    if (migratedConfig.isSplit && migratedConfig.devices.length > 0) {
+      const stranded = migratedConfig.devices;
+      migratedConfig = { ...migratedConfig, devices: [] };
+      for (const device of stranded) {
+        migratedConfig = appendDevice(migratedConfig, device);
+      }
+    }
     set({
       config: migratedConfig,
       selectedDeviceId: null,

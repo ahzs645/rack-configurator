@@ -68,6 +68,7 @@ export const DEVICES: RackDevice[] = [
 
   // KVM / Remote Management
   { id: 'jetkvm', name: 'JetKVM', category: 'kvm', width: 43, height: 31, depth: 45 },
+  { id: 'glinet_comet_x', name: 'GL.iNet Comet X (GL-RM4PE)', category: 'kvm', width: 170, height: 40, depth: 90 },
   { id: 'pikvm_v4_plus', name: 'PiKVM V4 Plus', category: 'kvm', width: 91, height: 37, depth: 63 },
   { id: 'pikvm_v4_mini', name: 'PiKVM V4 Mini', category: 'kvm', width: 68, height: 23, depth: 68 },
   { id: 'tinypilot_voyager2', name: 'TinyPilot Voyager 2', category: 'kvm', width: 83, height: 30, depth: 85 },

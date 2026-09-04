@@ -370,7 +370,10 @@ function DesktopLayout() {
         {/* Footer */}
         <footer className="bg-gray-800 border-t border-gray-700 px-4 py-2 text-xs text-gray-500 flex items-center justify-between flex-shrink-0">
           <div>
-            {config.devices.length} device{config.devices.length !== 1 ? 's' : ''} placed
+            {(() => {
+              const total = config.devices.length + config.leftDevices.length + config.rightDevices.length;
+              return `${total} device${total !== 1 ? 's' : ''} placed`;
+            })()}
           </div>
           <div>
             Rack: {config.rackU}U | Ears: {config.earStyle} | Back: {config.backStyle}
