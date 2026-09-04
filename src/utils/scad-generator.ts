@@ -1,5 +1,6 @@
 import type { RackConfig, PlacedDevice } from '../state/types';
-import { getDevice } from '../data/devices';
+import { getPlacedDeviceDimensions } from './device-geometry';
+export { getPlacedDeviceDimensions } from './device-geometry';
 import JSZip from 'jszip';
 
 /**
@@ -65,6 +66,7 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
     lines.push(`    cutout_radius = ${config.cutoutRadius},`);
     lines.push(`    show_preview = ${showPreview},`);
     lines.push(`    show_labels = ${showLabels},`);
+    lines.push(`    heavy_device = ${config.heavyDevice},`);
     lines.push(`    render_part = "${config.renderMode}",`);
     lines.push(`    joiner_type = "${config.joinerType || 'screw'}",`);
     lines.push(`    joiner_nut_side = "${config.joinerNutSide || 'right'}",`);
@@ -114,38 +116,19 @@ export function generateScadCode(config: RackConfig, useConfigPreview = true): s
  * backStyle can be "default" to use global setting, or "solid"/"vent"/"none" for override
  * shelfParams = [useHoneycomb, notch, notchWidth, screwHoles, cableHolesLeft, cableHolesRight]
  */
-function generateDevicesArray(devices: PlacedDevice[]): string {
+export function generateDevicesArray(devices: PlacedDevice[]): string {
   if (devices.length === 0) {
     return '[]';
   }
 
   const deviceStrings = devices.map((device) => {
-    // Use "default" if no per-device backStyle is set, otherwise use the specific style
-    const backStyle = device.backStyle || 'default';
-    const patchPanelPorts = device.patchPanelPorts || 6;  // Default to 6 ports
-
-    // Generate shelf params array if this is a shelf mount
-    const shelfParams = device.mountType === 'shelf' ? generateShelfParams(device) : null;
-
-    if (device.deviceId === 'custom') {
-      // Custom device: ["custom", offsetX, offsetY, mountType, [w, h, d], "name", backStyle, extraParams?]
-      if (device.mountType === 'patch_panel') {
-        return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}", ${patchPanelPorts}]`;
-      }
-      if (device.mountType === 'shelf' && shelfParams) {
-        return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}", ${shelfParams}]`;
-      }
-      return `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${device.customWidth}, ${device.customHeight}, ${device.customDepth}], "${device.customName || 'Custom Device'}", "${backStyle}"]`;
-    } else {
-      // Standard device: ["device_id", offsetX, offsetY, mountType, backStyle, extraParams?]
-      if (device.mountType === 'patch_panel') {
-        return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}", ${patchPanelPorts}]`;
-      }
-      if (device.mountType === 'shelf' && shelfParams) {
-        return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}", ${shelfParams}]`;
-      }
-      return `        ["${device.deviceId}", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", "${backStyle}"]`;
-    }
+    // Every output carries the editor's resolved dimensions. The device's
+    // catalog identity and orientation remain intact in JSON and share links.
+    const dims = getPlacedDeviceDimensions(device);
+    const base = `        ["custom", ${device.offsetX}, ${device.offsetY}, "${device.mountType}", [${dims.width}, ${dims.height}, ${dims.depth}], ${JSON.stringify(dims.name)}, "${device.backStyle || 'default'}"`;
+    if (device.mountType === 'patch_panel') return `${base}, ${device.patchPanelPorts || 6}]`;
+    if (device.mountType === 'shelf') return `${base}, ${generateShelfParams(device)}]`;
+    return `${base}]`;
   });
 
   return '[\n' + deviceStrings.join(',\n') + '\n    ]';
@@ -190,62 +173,6 @@ function generateShelfParams(device: PlacedDevice): string {
 /**
  * Get the effective dimensions of a placed device
  */
-export function getPlacedDeviceDimensions(device: PlacedDevice): {
-  width: number;
-  height: number;
-  depth: number;
-  name: string;
-} {
-  if (device.deviceId === 'custom') {
-    return {
-      width: device.customWidth || 50,
-      height: device.customHeight || 30,
-      depth: device.customDepth || 50,
-      name: device.customName || 'Custom Device',
-    };
-  }
-
-  const deviceData = getDevice(device.deviceId);
-  if (deviceData) {
-    // Special handling for patch panel - calculate width based on port count
-    if (device.mountType === 'patch_panel') {
-      const ports = device.patchPanelPorts || 6;
-      const keystoneSpacing = 19; // mm per keystone slot
-      return {
-        width: ports * keystoneSpacing,
-        height: 30, // Standard keystone visible height
-        depth: 15,
-        name: `${ports}-Port Patch Panel`,
-      };
-    }
-
-    // Special handling for Pi 5 case mount - use case dimensions
-    if (device.mountType === 'pi5_case') {
-      return {
-        width: 93,   // PI5_CASE_FACE_W (85 + 2*(2+1))
-        height: 64,  // PI5_CASE_FACE_H (56 + 2*(2+1))
-        depth: 35,   // PI5_CASE_DEPTH
-        name: 'Raspberry Pi 5 Case',
-      };
-    }
-
-    return {
-      width: deviceData.width,
-      height: deviceData.height,
-      depth: deviceData.depth,
-      name: deviceData.name,
-    };
-  }
-
-  // Fallback for unknown device
-  return {
-    width: 50,
-    height: 30,
-    depth: 50,
-    name: device.deviceId,
-  };
-}
-
 /**
  * Generate a default filename based on configuration
  */

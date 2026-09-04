@@ -8,7 +8,7 @@ type ResultCallback = (result: OpenSCADResult) => void;
 let worker: Worker | null = null;
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
-let pendingRequests = new Map<string, { resolve: ResultCallback; reject: (e: Error) => void }>();
+const pendingRequests = new Map<string, { resolve: ResultCallback; reject: (e: Error) => void }>();
 let statusCallback: StatusCallback | null = null;
 
 // Generate a unique ID for each request

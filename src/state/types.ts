@@ -2,6 +2,7 @@
 
 export type MountType =
   | 'cage'           // Full cage with honeycomb ventilation
+  | 'compact'        // Ventilated 4–6 mm supports, optionally sharing a divider
   | 'cage_rect'      // Cage with rectangular slot ventilation
   | 'cage_open'      // Side walls only, no front block
   | 'enclosed'       // Enclosed box with side rails
@@ -17,6 +18,7 @@ export type MountType =
 
 export const MOUNT_TYPE_LABELS: Record<MountType, string> = {
   cage: 'Cage (Honeycomb)',
+  compact: 'Compact Cage / Shared Support',
   cage_rect: 'Cage (Rectangular)',
   cage_open: 'Open Cage',
   enclosed: 'Enclosed Box',
@@ -129,6 +131,8 @@ export interface PlacedDevice {
   offsetX: number;     // mm from center (negative = left)
   offsetY: number;     // mm from center (negative = down)
   mountType: MountType;
+  orientation?: 'normal' | 'side'; // Roll 90°: swap width/height, preserve depth
+  sharedMountGroup?: string; // Compact cages deliberately sharing horizontal walls
   backStyle?: BackStyle; // Per-device back style (defaults to global if not set)
   // For custom devices only:
   customWidth?: number;

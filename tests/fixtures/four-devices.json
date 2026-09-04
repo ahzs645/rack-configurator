@@ -1,0 +1,22 @@
+{
+  "rackU": 2,
+  "panelWidth": 440.5,
+  "isSplit": true,
+  "splitPosition": 20,
+  "renderMode": "both",
+  "clearance": 1,
+  "heavyDevice": 0,
+  "joinerScrewType": "M3",
+  "joinerNutSide": "left",
+  "toollessHookPattern": [false, true],
+  "toollessHookTrimPattern": [true, false],
+  "devices": [],
+  "leftDevices": [
+    {"id":"7qnzrbi46k2b768b8bj6yf","deviceId":"ucg_fiber","offsetX":-104,"offsetY":-23,"mountType":"cage","backStyle":"none"},
+    {"id":"74300banxx6snj68u3tae","deviceId":"glinet_comet_x","offsetX":-62,"offsetY":24,"mountType":"cage"}
+  ],
+  "rightDevices": [
+    {"id":"2ch97leukbgshejqonpck8","deviceId":"minisforum_ai_x1","offsetX":146,"offsetY":-6,"mountType":"cage","backStyle":"none"},
+    {"id":"9edwrb2u1s5aqwne8f3zo","deviceId":"raspberry_pi_5_waveshare_poe","offsetX":73,"offsetY":16,"mountType":"cage","backStyle":"none"}
+  ]
+}

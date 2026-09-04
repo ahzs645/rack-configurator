@@ -15,11 +15,16 @@ import type {
   StandoffConfig,
   PCBPresetConfig,
 } from './types';
+import { canOrientDevice, getPlacedDeviceDimensions } from '../utils/device-geometry';
+import { compactWall, activeDevices } from '../utils/layout-fit';
 import { DEFAULT_RACK_CONFIG, getToollessHookCount } from './types';
 
 interface RackStore {
   // Current configuration
   config: RackConfig;
+  fitUndo: { before: RackConfig; after: RackConfig } | null;
+  applyFittedLayout: (config: RackConfig) => void;
+  undoFittedLayout: () => void;
 
   // UI state
   selectedDeviceId: string | null;
@@ -73,6 +78,9 @@ interface RackStore {
   addDevice: (deviceId: string, offsetX?: number, offsetY?: number, mountType?: MountType, side?: 'left' | 'right') => string;
   addCustomDevice: (name: string, width: number, height: number, depth: number, offsetX?: number, offsetY?: number, mountType?: MountType, side?: 'left' | 'right') => string;
   removeDevice: (id: string) => void;
+  updateDeviceOrientation: (id: string, orientation: 'normal' | 'side') => void;
+  stackDeviceAbove: (id: string, targetId: string) => void;
+  detachSharedMount: (id: string) => void;
   updateDevicePosition: (id: string, offsetX: number, offsetY: number) => void;
   updateDeviceMountType: (id: string, mountType: MountType) => void;
   updateDeviceBackStyle: (id: string, backStyle: BackStyle) => void;
@@ -143,6 +151,17 @@ export const useRackStore = create<RackStore>((set, get) => ({
   // Initial state
   config: { ...DEFAULT_RACK_CONFIG },
   selectedDeviceId: null,
+  fitUndo: null,
+  applyFittedLayout: (config) => {
+    const before = get().config;
+    get().loadConfig(config);
+    set({ fitUndo: { before, after: get().config } });
+  },
+  undoFittedLayout: () => {
+    const undo = get().fitUndo;
+    if (undo?.after === get().config) get().loadConfig(undo.before);
+    set({ fitUndo: null });
+  },
   zoom: 1,
   panX: 0,
   panY: 0,
@@ -479,6 +498,29 @@ export const useRackStore = create<RackStore>((set, get) => ({
     return id;
   },
 
+  updateDeviceOrientation: (id, orientation) => set((state) => {
+    const update = (d: PlacedDevice) => d.id === id && canOrientDevice(d) ? { ...d, orientation, sharedMountGroup: undefined } : d;
+    return { config: { ...state.config, devices: state.config.devices.map(update), leftDevices: state.config.leftDevices.map(update), rightDevices: state.config.rightDevices.map(update) } };
+  }),
+
+  detachSharedMount: (id) => set((state) => {
+    const update = (d: PlacedDevice) => d.id === id ? { ...d, sharedMountGroup: undefined } : d;
+    return { config: { ...state.config, devices: state.config.devices.map(update), leftDevices: state.config.leftDevices.map(update), rightDevices: state.config.rightDevices.map(update) } };
+  }),
+
+  stackDeviceAbove: (id, targetId) => set((state) => {
+    const c = state.config;
+    const device = activeDevices(c).find(d => d.id === id);
+    const target = activeDevices(c).find(d => d.id === targetId);
+    if (!device || !target || id === targetId || !canOrientDevice(device) || !canOrientDevice(target)) return state;
+    const list = c.isSplit ? (c.leftDevices.some(d => d.id === targetId) ? 'leftDevices' : 'rightDevices') : 'devices';
+    if (!c[list].some(d => d.id === id)) return state;
+    const group = target.sharedMountGroup || `shared-${targetId}`;
+    const y = target.offsetY + (getPlacedDeviceDimensions(target).height + getPlacedDeviceDimensions(device).height)/2 + c.clearance + compactWall(c);
+    return { config: { ...c, [list]: c[list].map(d => d.id === id ? { ...d, mountType: 'compact', sharedMountGroup: group, offsetX: target.offsetX, offsetY: y }
+      : d.id === targetId ? { ...d, mountType: 'compact', sharedMountGroup: group } : d) } };
+  }),
+
   removeDevice: (id) =>
     set((state) => ({
       config: {
@@ -496,6 +538,21 @@ export const useRackStore = create<RackStore>((set, get) => ({
     const snappedY = snapToGrid ? Math.round(offsetY / gridSize) * gridSize : offsetY;
 
     set((state) => {
+      // Shared dividers are a physical assembly: translate every member by the
+      // same delta so dragging or editing a coordinate preserves the divider.
+      const original = activeDevices(state.config).find(d => d.id === id);
+      const group = original?.sharedMountGroup;
+      if (original && group) {
+        const members = activeDevices(state.config).filter(d => d.sharedMountGroup === group);
+        if (members.length > 1) {
+          const moved = members.map(d => ({ ...d, offsetX: d.offsetX + snappedX - original.offsetX, offsetY: d.offsetY + snappedY - original.offsetY }));
+          const keep = (d: PlacedDevice) => d.sharedMountGroup !== group;
+          const target = state.config.isSplit ? (snappedX < state.config.splitPosition ? 'leftDevices' : 'rightDevices') : 'devices';
+          const config = { ...state.config, devices: state.config.devices.filter(keep), leftDevices: state.config.leftDevices.filter(keep), rightDevices: state.config.rightDevices.filter(keep) };
+          config[target] = [...config[target], ...moved];
+          return { config };
+        }
+      }
       // If in split mode, check if device needs to move to the other side
       if (state.config.isSplit) {
         const splitPos = state.config.splitPosition;
@@ -555,13 +612,13 @@ export const useRackStore = create<RackStore>((set, get) => ({
       config: {
         ...state.config,
         devices: state.config.devices.map((d) =>
-          d.id === id ? { ...d, mountType } : d
+          d.id === id ? { ...d, mountType, sharedMountGroup: undefined, orientation: canOrientDevice({ ...d, mountType }) ? d.orientation : undefined } : d
         ),
         leftDevices: state.config.leftDevices.map((d) =>
-          d.id === id ? { ...d, mountType } : d
+          d.id === id ? { ...d, mountType, sharedMountGroup: undefined, orientation: canOrientDevice({ ...d, mountType }) ? d.orientation : undefined } : d
         ),
         rightDevices: state.config.rightDevices.map((d) =>
-          d.id === id ? { ...d, mountType } : d
+          d.id === id ? { ...d, mountType, sharedMountGroup: undefined, orientation: canOrientDevice({ ...d, mountType }) ? d.orientation : undefined } : d
         ),
       },
     })),
@@ -900,6 +957,7 @@ export const useRackStore = create<RackStore>((set, get) => ({
     // Migrate old configs that don't have toollessHookPattern or toollessHookTrimPattern
     const hookCount = getToollessHookCount(config.rackU);
     let migratedConfig: RackConfig = {
+      ...DEFAULT_RACK_CONFIG,
       ...config,
       devices: config.devices || [],
       leftDevices: config.leftDevices || [],

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useRackStore } from '../state/rack-store';
 import type { ViewConfig } from '../utils/coordinates';
@@ -8,9 +8,8 @@ import {
   svgToRack,
   getRackDimensions,
   rackSizeToSvg,
-  devicesOverlap,
 } from '../utils/coordinates';
-import { getPlacedDeviceDimensions } from '../utils/scad-generator';
+import { validateLayout, getSplitMargin } from '../utils/layout-fit';
 import { DeviceOnRack } from './DeviceOnRack';
 import { RACK_CONSTANTS, TOOLLESS_HOOK_SPACING, getToollessHookCount, type EarStyle, type EarPosition } from '../state/types';
 
@@ -18,15 +17,6 @@ const PADDING = 40;
 
 // Ear dimensions based on EIA-310 rack standard
 const EAR_WIDTH = (RACK_CONSTANTS.FACEPLATE_WIDTH - RACK_CONSTANTS.PANEL_WIDTH) / 2; // ~15.875mm
-
-// Split line exclusion zone - devices (including cage walls) must not overlap
-// Components:
-// - Joiner wall: 4mm (extends 2mm on each side)
-// - Cage wall thickness: 4-6mm (depending on heavy_device setting)
-// - Buffer: 2mm for tolerance
-// Total: ~10mm on each side of split line
-const SPLIT_MARGIN = 10; // mm on each side of split line
-const CAGE_WALL_THICKNESS = 6; // max cage wall thickness (heavy_device=2)
 
 // Hook dimensions from OpenSCAD backplate_profile (rack_ears.scad)
 // The hook profile: X range -12.1 to 0 (12.1mm), Y range 2.25 to 32.65 (30.4mm)
@@ -323,7 +313,7 @@ export function RackConfigurator() {
   }, []);
 
   // View configuration for coordinate transforms
-  const view: ViewConfig = {
+  const view: ViewConfig = useMemo(() => ({
     svgWidth: svgSize.width,
     svgHeight: svgSize.height,
     rackU: config.rackU,
@@ -332,7 +322,7 @@ export function RackConfigurator() {
     panX,
     panY,
     padding: PADDING,
-  };
+  }), [svgSize.width, svgSize.height, config.rackU, config.panelWidth, zoom, panX, panY]);
 
   // Get rack bounds in SVG coords
   const rackBounds = getRackBoundsSvg(view);
@@ -403,75 +393,8 @@ export function RackConfigurator() {
   // Calculate split line position (moved here so it's available for overlap detection)
   const splitLineX = config.splitPosition || 0; // 0 = center
 
-  // Check if a device overlaps with the split exclusion zone
-  const deviceOverlapsSplitZone = (device: typeof allDevices[0]) => {
-    if (!config.isSplit) return false;
-
-    const dims = getPlacedDeviceDimensions(device);
-    // Include cage wall thickness in bounds (cage walls extend beyond cutout)
-    // For "none" mount type, there's no cage, so no extra margin needed
-    const cageMargin = device.mountType === 'none' ? 0 : CAGE_WALL_THICKNESS;
-    const deviceLeft = device.offsetX - dims.width / 2 - cageMargin;
-    const deviceRight = device.offsetX + dims.width / 2 + cageMargin;
-    const splitLeft = splitLineX - SPLIT_MARGIN;
-    const splitRight = splitLineX + SPLIT_MARGIN;
-
-    // Check if device bounds (including cage walls) overlap with split exclusion zone
-    return deviceRight > splitLeft && deviceLeft < splitRight;
-  };
-
-  // Get effective dimensions including cage walls
-  const getEffectiveDimensions = (device: typeof allDevices[0]) => {
-    const dims = getPlacedDeviceDimensions(device);
-    // Add cage wall thickness on each side (except for "none" mount type)
-    const cageMargin = device.mountType === 'none' ? 0 : CAGE_WALL_THICKNESS;
-    return {
-      ...dims,
-      width: dims.width + cageMargin * 2,
-      height: dims.height + cageMargin * 2,
-    };
-  };
-
-  // Check for overlapping devices and devices that cross the split zone
-  const getOverlappingDevices = () => {
-    const overlapping = new Set<string>();
-
-    for (let i = 0; i < allDevices.length; i++) {
-      const d1 = allDevices[i];
-      const effDims1 = getEffectiveDimensions(d1);
-
-      // Check if device overlaps with split exclusion zone
-      if (deviceOverlapsSplitZone(d1)) {
-        overlapping.add(d1.id);
-      }
-
-      for (let j = i + 1; j < allDevices.length; j++) {
-        const d2 = allDevices[j];
-        const effDims2 = getEffectiveDimensions(d2);
-
-        // Check overlap using effective dimensions (including cage walls)
-        if (
-          devicesOverlap(
-            d1.offsetX,
-            d1.offsetY,
-            effDims1.width,
-            effDims1.height,
-            d2.offsetX,
-            d2.offsetY,
-            effDims2.width,
-            effDims2.height
-          )
-        ) {
-          overlapping.add(d1.id);
-          overlapping.add(d2.id);
-        }
-      }
-    }
-
-    return overlapping;
-  };
-
-  const overlappingDevices = getOverlappingDevices();
+  const SPLIT_MARGIN = getSplitMargin(config);
+  const overlappingDevices = new Set(validateLayout(config).filter(i => i.severity === 'error').flatMap(i => i.deviceIds));
 
   // Handle split line drag (only if not locked)
   const handleSplitMouseDown = useCallback((e: React.MouseEvent) => {
@@ -809,16 +732,6 @@ export function RackConfigurator() {
             >
               RIGHT
             </text>
-            {/* Split position indicator */}
-            <text
-              x={rackToSvg(splitLineX, 0, view).x}
-              y={rackBounds.y + rackBounds.height + 15}
-              textAnchor="middle"
-              fill="#a78bfa"
-              fontSize={10}
-            >
-              Split: {splitLineX}mm (±{SPLIT_MARGIN}mm zone)
-            </text>
           </g>
         )}
 
@@ -832,7 +745,7 @@ export function RackConfigurator() {
           />
         ))}
 
-        {/* Dimensions label */}
+        {/* Stack the rack details beneath the panel on separate lines. */}
         <text
           x={rackBounds.x + rackBounds.width / 2}
           y={rackBounds.y + rackBounds.height + 20}
@@ -841,6 +754,16 @@ export function RackConfigurator() {
           fontSize={12}
         >
           {rack.width.toFixed(1)}mm x {rack.height.toFixed(1)}mm ({config.rackU}U)
+          {config.isSplit && (
+            <tspan
+              x={rackBounds.x + rackBounds.width / 2}
+              dy={16}
+              fill="#a78bfa"
+              fontSize={10}
+            >
+              Split: {splitLineX}mm (±{SPLIT_MARGIN}mm zone)
+            </tspan>
+          )}
         </text>
 
         {/* Drop hint */}

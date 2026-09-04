@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { FitPanel } from './FitPanel';
+import { canOrientDevice } from '../utils/device-geometry';
+import { useState } from 'react';
 import { useRackStore } from '../state/rack-store';
 import type { MountType, PlacedDevice, BackStyle, JoinerScrewType, JoinerType, ShelfNotch } from '../state/types';
 import { MOUNT_TYPE_LABELS, BACK_STYLE_LABELS, JOINER_SCREW_TYPE_LABELS, JOINER_TYPE_LABELS, SHELF_NOTCH_LABELS } from '../state/types';
@@ -17,10 +19,11 @@ function PatchPanelPortsInput({
 }) {
   const [inputValue, setInputValue] = useState(String(currentPorts));
 
-  // Sync input value when currentPorts changes from outside (e.g., device selection change)
-  useEffect(() => {
+  const [previous, setPrevious] = useState({ currentPorts, deviceId });
+  if (previous.currentPorts !== currentPorts || previous.deviceId !== deviceId) {
+    setPrevious({ currentPorts, deviceId });
     setInputValue(String(currentPorts));
-  }, [currentPorts, deviceId]);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -131,6 +134,9 @@ export function PropertyPanel() {
     selectDevice,
     updateDevicePosition,
     updateDeviceMountType,
+    updateDeviceOrientation,
+    stackDeviceAbove,
+    detachSharedMount,
     updateDeviceBackStyle,
     updateDeviceDimensions,
     updateDevicePatchPanelPorts,
@@ -185,6 +191,8 @@ export function PropertyPanel() {
   }
 
   const dims = selectedDevice ? getPlacedDeviceDimensions(selectedDevice) : null;
+  const nutSide = config.joinerNutSide || 'right';
+  const screwSide = nutSide === 'left' ? 'right' : 'left';
 
   const handlePositionChange = (axis: 'x' | 'y', value: string) => {
     if (!selectedDevice) return;
@@ -197,7 +205,8 @@ export function PropertyPanel() {
   };
 
   return (
-    <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col h-full flex-shrink-0 overflow-hidden">
+    <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col h-full flex-shrink-0 overflow-y-auto">
+      <FitPanel />
       {/* Placed Devices List */}
       <div className="p-3 border-b border-gray-700">
         <div className="flex items-center justify-between mb-2">
@@ -235,10 +244,23 @@ export function PropertyPanel() {
                     <div className="text-xs text-gray-400">
                       {config.joinerType === 'dovetail'
                         ? 'Dovetail (tool-free)'
-                        : `${config.joinerScrewType || 'M5'} bolt joint • Nut on ${config.joinerNutSide || 'right'}`}
+                        : `${config.joinerScrewType || 'M5'} • Nut ${nutSide} / Screw ${screwSide}`}
                     </div>
                   </div>
                 </div>
+                {config.joinerType !== 'dovetail' && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setJoinerNutSide(screwSide);
+                    }}
+                    title={`Move the nut pocket to the ${screwSide} and the screw head to the ${nutSide}`}
+                    className="mt-2 w-full rounded border border-purple-400/50 px-2 py-1.5 text-xs font-medium text-purple-200 hover:bg-purple-500/20 focus-visible:outline-2 focus-visible:outline-purple-400"
+                  >
+                    Flip nut / screw
+                  </button>
+                )}
               </div>
             )}
             {allPlacedDevices.map(({ device, side }) => (
@@ -308,31 +330,33 @@ export function PropertyPanel() {
 
           {/* Nut Side */}
           <div className="mb-3">
-            <label className="block text-xs text-gray-400 mb-1">Nut Pocket Side</label>
+            <div className="block text-xs text-gray-400 mb-1">Nut and Screw Sides</div>
             <div className="flex gap-1">
               <button
                 onClick={() => setJoinerNutSide('left')}
+                aria-pressed={nutSide === 'left'}
                 className={`flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
                   (config.joinerNutSide || 'right') === 'left'
                     ? 'bg-purple-600 text-white'
                     : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                 }`}
               >
-                Left Side
+                Nut left / Screw right
               </button>
               <button
                 onClick={() => setJoinerNutSide('right')}
+                aria-pressed={nutSide === 'right'}
                 className={`flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
                   (config.joinerNutSide || 'right') === 'right'
                     ? 'bg-purple-600 text-white'
                     : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                 }`}
               >
-                Right Side
+                Screw left / Nut right
               </button>
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              The other side will have clearance holes for the screw head
+              Left and right match the 2D front view. Flipping swaps the nut pockets and screw entry sides in the 3D preview and exports.
             </div>
           </div>
 
@@ -401,6 +425,26 @@ export function PropertyPanel() {
             >
               Remove
             </button>
+          </div>
+
+          <div className="mb-3 space-y-2">
+            <label className="block text-xs text-gray-400" htmlFor="device-orientation">Orientation</label>
+            <select id="device-orientation" value={selectedDevice.orientation ?? 'normal'} disabled={!canOrientDevice(selectedDevice)}
+              onChange={e => updateDeviceOrientation(selectedDevice.id, e.target.value as 'normal' | 'side')}
+              className="w-full p-2 bg-gray-700 rounded text-sm text-white disabled:opacity-40">
+              <option value="normal">Normal</option><option value="side">On its side (90°)</option>
+            </select>
+            <p className="text-xs text-gray-400">{canOrientDevice(selectedDevice) ? 'Rotates the device opening. Width and height swap; depth stays the same.' : 'Use a generic cage to change orientation. This mount has fixed mounting features.'}</p>
+            {canOrientDevice(selectedDevice) && <>
+              <label className="block text-xs text-gray-400" htmlFor="shared-support">Stack above with a shared divider</label>
+              <select id="shared-support" value="" onChange={e => { if (e.target.value) stackDeviceAbove(selectedDevice.id, e.target.value); }}
+                className="w-full p-2 bg-gray-700 rounded text-sm text-white">
+                <option value="">Choose a device on this side…</option>
+                {allPlacedDevices.filter(d => d.device.id !== selectedDevice.id && (d.side ?? 'main') === deviceSide && canOrientDevice(d.device)).map(({ device: d }) => <option key={d.id} value={d.id}>{getPlacedDeviceDimensions(d).name}</option>)}
+              </select>
+              <p className="text-xs text-gray-400">Converts both mounts to compact cages and aligns them on one shared wall.</p>
+            </>}
+            {selectedDevice.sharedMountGroup && <button className="text-xs text-teal-300 underline" onClick={() => detachSharedMount(selectedDevice.id)}>Detach from shared support</button>}
           </div>
 
           {/* Custom device dimensions (editable) */}

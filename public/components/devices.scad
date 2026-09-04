@@ -36,6 +36,7 @@ DEVICES = [
     ["beelink_ser5",         [126, 42, 113],  "Beelink SER5",            "mini_pc"],
     ["beelink_eq12",         [115, 42, 102],  "Beelink EQ12",            "mini_pc"],
     ["geekom_mini_it13",     [117, 37, 112],  "GEEKOM Mini IT13",        "mini_pc"],
+    ["glinet_comet_x", [170, 40, 90], "GL.iNet Comet X (GL-RM4PE)", "kvm"],
     ["minisforum_ai_x1",     [127.5, 58, 125.5],  "Minisforum AI X1",        "mini_pc"],
 
     // -------------------------------------------------------------------------
@@ -122,7 +123,7 @@ DEVICES = [
 // Get full device entry [width, height, depth]
 function get_device(device_id) =
     let(idx = search([device_id], DEVICES))
-    len(idx) > 0 && idx[0] < len(DEVICES) ? DEVICES[idx[0]][1] : [0, 0, 0];
+    len(idx) > 0 && is_num(idx[0]) && idx[0] < len(DEVICES) ? DEVICES[idx[0]][1] : [0, 0, 0];
 
 // Get individual dimensions
 function device_width(device_id) = get_device(device_id)[0];
@@ -132,17 +133,17 @@ function device_depth(device_id) = get_device(device_id)[2];
 // Get display name
 function device_name(device_id) =
     let(idx = search([device_id], DEVICES))
-    len(idx) > 0 && idx[0] < len(DEVICES) ? DEVICES[idx[0]][2] : "Unknown";
+    len(idx) > 0 && is_num(idx[0]) && idx[0] < len(DEVICES) ? DEVICES[idx[0]][2] : "Unknown";
 
 // Get category
 function device_category(device_id) =
     let(idx = search([device_id], DEVICES))
-    len(idx) > 0 && idx[0] < len(DEVICES) ? DEVICES[idx[0]][3] : "unknown";
+    len(idx) > 0 && is_num(idx[0]) && idx[0] < len(DEVICES) ? DEVICES[idx[0]][3] : "unknown";
 
 // Check if device exists
 function device_exists(device_id) =
     let(idx = search([device_id], DEVICES))
-    len(idx) > 0 && idx[0] < len(DEVICES);
+    len(idx) > 0 && is_num(idx[0]) && idx[0] < len(DEVICES);
 
 // Get all devices in a category
 function devices_in_category(category) =

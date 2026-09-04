@@ -214,7 +214,7 @@ function DesktopLayout() {
             const centerX = rect.left + rect.width / 2;
 
             // Estimate scale to convert splitPosition (in mm) to pixels
-            const baseScale = calculateFitScale(rect.width, rect.height, config.rackU, 40);
+            const baseScale = calculateFitScale(rect.width, rect.height, config.rackU, 40, config.panelWidth);
             const splitOffsetPx = config.splitPosition * baseScale;
             const splitLineX = centerX + splitOffsetPx;
 
@@ -247,10 +247,10 @@ function DesktopLayout() {
       let scale: number;
       if (dropZone) {
         const rect = dropZone.getBoundingClientRect();
-        scale = calculateFitScale(rect.width, rect.height, config.rackU, 40) * zoom;
+        scale = calculateFitScale(rect.width, rect.height, config.rackU, 40, config.panelWidth) * zoom;
       } else {
         // Fallback
-        scale = calculateFitScale(800, 600, config.rackU, 40) * zoom;
+        scale = calculateFitScale(800, 600, config.rackU, 40, config.panelWidth) * zoom;
       }
 
       // Convert delta from pixels to mm
@@ -277,7 +277,7 @@ function DesktopLayout() {
       }
 
       // Clamp to rack bounds
-      const clamped = clampToRackBounds(newCenterX, newCenterY, dims.width, dims.height, config.rackU);
+      const clamped = clampToRackBounds(newCenterX, newCenterY, dims.width, dims.height, config.rackU, config.panelWidth);
 
       updateDevicePosition(placedDevice.id, clamped.x, clamped.y);
     }
@@ -351,7 +351,7 @@ function DesktopLayout() {
                 </button>
               </div>
               <span className="text-xs text-gray-500">
-                {mainViewMode === '2d' ? 'Drag devices to configure rack' : 'Rotate: drag | Zoom: scroll'}
+                {mainViewMode === '2d' ? 'Drag devices to configure rack' : 'Drag: rotate | Shift/right-drag: pan | Scroll: zoom'}
               </span>
             </div>
 

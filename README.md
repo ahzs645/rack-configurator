@@ -1,3 +1,13 @@
+# Rack Configurator
+
+The editor supports device rotation, compact cages, shared dividers, fit diagnostics, and a preview/apply/undo workflow for fitting devices into 2U on desktop and mobile.
+
+See [the 2U fitting guide](docs/2u-fitting.md) for the four-device example, controls, dimensions and validation commands. Load [the fitted example](public/examples/four-devices-2u.json) through **Open** in the configurator.
+
+Run `npm run dev` to start the editor. Run `npm test`, `npm run lint`, and `npm run build` to check it. `npm run test:geometry` produces and verifies printable exports.
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

@@ -150,13 +150,14 @@ export function clampToRackBounds(
   offsetY: number,
   deviceWidth: number,
   deviceHeight: number,
-  rackU: number
+  rackU: number,
+  panelWidth?: number
 ): { x: number; y: number } {
-  const rack = getRackDimensions(rackU);
+  const rack = getRackDimensions(rackU, panelWidth);
 
   // Max offsets (device center must keep device within bounds)
-  const maxX = (rack.width - deviceWidth) / 2;
-  const maxY = (rack.height - deviceHeight) / 2;
+  const maxX = Math.max(0, (rack.width - deviceWidth) / 2);
+  const maxY = Math.max(0, (rack.height - deviceHeight) / 2);
 
   return {
     x: Math.max(-maxX, Math.min(maxX, offsetX)),

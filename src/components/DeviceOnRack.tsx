@@ -8,11 +8,13 @@ import { getPlacedDeviceDimensions } from '../utils/scad-generator';
 import type { ViewConfig } from '../utils/coordinates';
 import { rackToSvg, rackSizeToSvg, calculateFitScale } from '../utils/coordinates';
 import { useRackStore } from '../state/rack-store';
+import { getMountEnvelope } from '../utils/layout-fit';
 import { getAllowedMountTypes } from '../data/devices';
 
 // Short labels for mount types
 const MOUNT_TYPE_SHORT: Record<MountType, string> = {
   cage: 'CAGE',
+  compact: 'COMPACT',
   cage_rect: 'RECT',
   cage_open: 'OPEN',
   enclosed: 'ENCL',
@@ -27,11 +29,10 @@ const MOUNT_TYPE_SHORT: Record<MountType, string> = {
   none: 'NONE',
 };
 
-// Cage wall thickness in mm (max value with heavy_device=2)
-const CAGE_WALL_THICKNESS = 6;
 
 // Colors for mount types
 const MOUNT_TYPE_COLORS: Record<MountType, string> = {
+  compact: '#14b8a6',
   cage: '#3b82f6',      // blue
   cage_rect: '#6366f1', // indigo
   cage_open: '#8b5cf6', // violet
@@ -64,6 +65,8 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
   const isRightSide = config.rightDevices.some((d) => d.id === device.id);
 
   const dims = getPlacedDeviceDimensions(device);
+  const envelope = getMountEnvelope(device, config);
+  const CAGE_WALL_THICKNESS = (envelope.width - dims.width) / 2;
 
   // Calculate SVG position (top-left corner of device)
   const centerSvg = rackToSvg(device.offsetX, device.offsetY, view);
@@ -91,7 +94,7 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
     }
 
     // Calculate scale to convert pixels to mm
-    const scale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding) * view.zoom;
+    const scale = calculateFitScale(view.svgWidth, view.svgHeight, view.rackU, view.padding, view.panelWidth) * view.zoom;
 
     // Convert current device position and delta to get new position in mm
     const deltaXMm = transform.x / scale;
@@ -195,7 +198,8 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
   }, [showMountMenu]);
 
   // Only show label if device is large enough
-  const showLabel = widthSvg > 60 && heightSvg > 20;
+  const verticalLabel = device.orientation === 'side' && heightSvg > widthSvg;
+  const showLabel = verticalLabel ? heightSvg > 60 && widthSvg > 20 : widthSvg > 60 && heightSvg > 20;
   const fontSize = Math.min(12, Math.max(8, heightSvg * 0.4));
 
   // Mount type badge dimensions
@@ -229,6 +233,7 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
           style={{ pointerEvents: 'none' }}
         />
       )}
+      <title>{dims.name}{device.orientation === 'side' ? ' · On its side (90°)' : ''}{device.sharedMountGroup ? ' · Shared divider' : ''}</title>
       {/* Device cutout rectangle */}
       <rect
         x={x}
@@ -246,7 +251,8 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
       {showLabel && (
         <text
           x={x + widthSvg / 2}
-          y={y + heightSvg / 2 - 6}
+          y={y + heightSvg / 2 - (verticalLabel ? 0 : 6)}
+          transform={verticalLabel ? `rotate(-90 ${x + widthSvg / 2} ${y + heightSvg / 2})` : undefined}
           textAnchor="middle"
           dominantBaseline="middle"
           fill="white"

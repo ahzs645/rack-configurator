@@ -176,8 +176,8 @@ async function render(
   }
 
   const startTime = Date.now();
-  let stdout = '';
-  let stderr = '';
+  const stdout = '';
+  const stderr = '';
 
   try {
     const FS = openscadInstance.FS;
@@ -286,7 +286,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       await initialize();
       break;
 
-    case 'invoke':
+    case 'invoke': {
       if (!isReady) {
         postResponse({
           type: 'result',
@@ -315,6 +315,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       postResponse({ type: 'result', id, payload: result });
       break;
 
+    }
     case 'cancel':
       // TODO: Implement cancellation
       break;

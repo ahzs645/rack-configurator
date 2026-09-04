@@ -1,5 +1,7 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { fitViewerCamera, zoomViewerCamera } from '../utils/viewer-camera';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { useRackStore } from '../state/rack-store';
 import { useLiveScadRender } from '../hooks/useLiveScadRender';
@@ -12,15 +14,26 @@ export function MainViewer3D() {
     camera: THREE.PerspectiveCamera;
     renderer: THREE.WebGLRenderer;
     animationId: number;
-    // Orbit controls state
-    controls: {
-      isDragging: boolean;
-      prevMouse: { x: number; y: number };
-      spherical: { radius: number; theta: number; phi: number };
-      target: THREE.Vector3;
-    };
+    controls: OrbitControls;
   } | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
+  const [dragMode, setDragMode] = useState<'rotate' | 'pan'>('rotate');
+
+  const fitView = () => {
+    const state = sceneRef.current;
+    const geometry = meshRef.current?.geometry;
+    if (!state || !geometry) return;
+    geometry.computeBoundingSphere();
+    fitViewerCamera(state.camera, state.controls.target, geometry.boundingSphere?.radius ?? 250);
+    state.controls.update();
+  };
+
+  const zoomView = (factor: number) => {
+    const state = sceneRef.current;
+    if (!state) return;
+    zoomViewerCamera(state.camera, state.controls.target, factor, state.controls.minDistance, state.controls.maxDistance);
+    state.controls.update();
+  };
 
   const { stlData, isRendering, error, lastRenderTime } = useLiveScadRender();
 
@@ -50,8 +63,8 @@ export function MainViewer3D() {
     if (!containerRef.current) return;
 
     const container = containerRef.current;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const width = Math.max(1, container.clientWidth);
+    const height = Math.max(1, container.clientHeight);
 
     // Scene
     const scene = new THREE.Scene();
@@ -65,7 +78,8 @@ export function MainViewer3D() {
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    renderer.domElement.style.touchAction = 'none';
     container.appendChild(renderer.domElement);
 
     // Lighting
@@ -85,106 +99,67 @@ export function MainViewer3D() {
     gridHelper.position.y = -100;
     scene.add(gridHelper);
 
-    // Orbit controls state - camera orbits around target
-    const target = new THREE.Vector3(0, 0, 0);
-    const initialRadius = camera.position.length();
-    const controls = {
-      isDragging: false,
-      prevMouse: { x: 0, y: 0 },
-      spherical: {
-        radius: initialRadius,
-        theta: Math.atan2(camera.position.x, camera.position.z), // horizontal angle
-        phi: Math.acos(camera.position.y / initialRadius), // vertical angle
-      },
-      target,
-    };
-
-    // Helper to update camera position from spherical coordinates
-    const updateCameraPosition = () => {
-      const { radius, theta, phi } = controls.spherical;
-      camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
-      camera.position.y = radius * Math.cos(phi);
-      camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
-      camera.lookAt(controls.target);
-    };
-
+    // OrbitControls moves the camera and its target together when panning.
+    // Wheel zoom follows the cursor so off-center details stay under the pointer.
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.screenSpacePanning = true;
+    controls.zoomToCursor = true;
+    controls.minDistance = 5;
+    controls.maxDistance = 5000;
+    controls.rotateSpeed = 0.7;
+    controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+    renderer.domElement.style.cursor = 'grab';
+    renderer.domElement.setAttribute('aria-label', 'Interactive 3D rack view');
+    renderer.domElement.setAttribute('role', 'img');
     sceneRef.current = { scene, camera, renderer, animationId: 0, controls };
 
-    // Animation loop
     const animate = () => {
       if (!sceneRef.current) return;
       sceneRef.current.animationId = requestAnimationFrame(animate);
+      controls.update();
       renderer.render(scene, camera);
     };
     animate();
 
-    // Mouse controls for orbiting camera
-    const onMouseDown = (e: MouseEvent) => {
-      controls.isDragging = true;
-      controls.prevMouse = { x: e.clientX, y: e.clientY };
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (!controls.isDragging) return;
-      const deltaX = e.clientX - controls.prevMouse.x;
-      const deltaY = e.clientY - controls.prevMouse.y;
-
-      // Update spherical coordinates (drag direction matches rotation)
-      controls.spherical.theta -= deltaX * 0.01;
-      controls.spherical.phi -= deltaY * 0.01;
-
-      // Clamp phi to avoid flipping (keep between 0.1 and PI - 0.1)
-      controls.spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, controls.spherical.phi));
-
-      updateCameraPosition();
-      controls.prevMouse = { x: e.clientX, y: e.clientY };
-    };
-
-    const onMouseUp = () => {
-      controls.isDragging = false;
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      // Zoom by changing radius
-      controls.spherical.radius *= e.deltaY > 0 ? 1.1 : 0.9;
-      // Clamp radius
-      controls.spherical.radius = Math.max(50, Math.min(2000, controls.spherical.radius));
-      updateCameraPosition();
-    };
-
-    renderer.domElement.addEventListener('mousedown', onMouseDown);
-    renderer.domElement.addEventListener('mousemove', onMouseMove);
-    renderer.domElement.addEventListener('mouseup', onMouseUp);
-    renderer.domElement.addEventListener('mouseleave', onMouseUp);
-    renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
-
     // Handle resize
     const handleResize = () => {
       if (!containerRef.current || !sceneRef.current) return;
-      const w = containerRef.current.clientWidth;
-      const h = containerRef.current.clientHeight;
+      const w = Math.max(1, containerRef.current.clientWidth);
+      const h = Math.max(1, containerRef.current.clientHeight);
       sceneRef.current.camera.aspect = w / h;
       sceneRef.current.camera.updateProjectionMatrix();
       sceneRef.current.renderer.setSize(w, h);
     };
-    window.addEventListener('resize', handleResize);
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(container);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      renderer.domElement.removeEventListener('mousedown', onMouseDown);
-      renderer.domElement.removeEventListener('mousemove', onMouseMove);
-      renderer.domElement.removeEventListener('mouseup', onMouseUp);
-      renderer.domElement.removeEventListener('mouseleave', onMouseUp);
-      renderer.domElement.removeEventListener('wheel', onWheel);
+      observer.disconnect();
+      controls.dispose();
+      gridHelper.geometry.dispose();
+      const gridMaterials = Array.isArray(gridHelper.material) ? gridHelper.material : [gridHelper.material];
+      gridMaterials.forEach(material => material.dispose());
       if (sceneRef.current) {
         cancelAnimationFrame(sceneRef.current.animationId);
         sceneRef.current.renderer.dispose();
         container.removeChild(sceneRef.current.renderer.domElement);
         sceneRef.current = null;
       }
+      if (meshRef.current) {
+        meshRef.current.geometry.dispose();
+        if (meshRef.current.material instanceof THREE.Material) meshRef.current.material.dispose();
+        meshRef.current = null;
+      }
     };
   }, []);
+
+  useEffect(() => {
+    const state = sceneRef.current;
+    if (!state) return;
+    state.controls.mouseButtons.LEFT = dragMode === 'pan' ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+    state.controls.touches.ONE = dragMode === 'pan' ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE;
+    state.renderer.domElement.style.cursor = dragMode === 'pan' ? 'move' : 'grab';
+  }, [dragMode]);
 
   // Update mesh when STL geometry changes
   useEffect(() => {
@@ -192,6 +167,7 @@ export function MainViewer3D() {
 
     const { scene } = sceneRef.current;
 
+    const hadMesh = !!meshRef.current;
     // Remove old mesh
     if (meshRef.current) {
       scene.remove(meshRef.current);
@@ -216,16 +192,36 @@ export function MainViewer3D() {
       scene.add(mesh);
       meshRef.current = mesh;
 
-      // Update orbit target to center of mesh
-      if (sceneRef.current) {
-        sceneRef.current.controls.target.set(0, 0, 0);
+      // Fit the first model only. Re-rendering must preserve an edge close-up.
+      if (!hadMesh) {
+        const { camera, controls } = sceneRef.current;
+        stlGeometry.computeBoundingSphere();
+        fitViewerCamera(camera, controls.target, stlGeometry.boundingSphere?.radius ?? 250);
+        controls.maxDistance = Math.max(5000, camera.position.length() * 4);
+        camera.far = controls.maxDistance * 2;
+        camera.updateProjectionMatrix();
+        controls.update();
       }
     }
   }, [stlGeometry]);
 
   return (
-    <div className="flex-1 relative bg-gray-900">
-      <div ref={containerRef} className="w-full h-full" />
+    <div className="flex-1 relative w-full h-full min-h-0 bg-gray-900">
+      <div ref={containerRef} className="absolute inset-0" />
+
+      <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap items-center gap-2 pointer-events-none">
+        <div role="toolbar" aria-label="3D view controls" className="flex gap-1 bg-gray-900/90 border border-gray-600 rounded-lg p-1 pointer-events-auto text-xs text-white">
+          <button aria-pressed={dragMode === 'rotate'} onClick={() => setDragMode('rotate')} title="Drag to rotate; Shift-drag or right-drag to pan"
+            className={`px-3 py-2 rounded ${dragMode === 'rotate' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}>Rotate</button>
+          <button aria-pressed={dragMode === 'pan'} onClick={() => setDragMode('pan')} title="Drag to move the view"
+            className={`px-3 py-2 rounded ${dragMode === 'pan' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}>Pan</button>
+          <span className="border-l border-gray-600 mx-1" />
+          <button aria-label="Zoom in" title="Zoom in" onClick={() => zoomView(0.8)} className="px-3 py-2 rounded hover:bg-gray-700">+</button>
+          <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomView(1.25)} className="px-3 py-2 rounded hover:bg-gray-700">−</button>
+          <button onClick={fitView} title="Recenter and fit the entire rack" className="px-3 py-2 rounded hover:bg-gray-700">Fit view</button>
+        </div>
+        <p className="text-xs text-gray-300 bg-gray-900/80 rounded px-2 py-1">{dragMode === 'rotate' ? 'Drag to rotate' : 'Drag to pan'} · Shift/right-drag to pan in Rotate mode · Scroll to zoom toward cursor</p>
+      </div>
 
       {/* Loading overlay */}
       {isRendering && (

@@ -30,6 +30,42 @@ DEFAULT_HEX_BORDER = 5;   // Solid border around edges
  *   total_height - Total height of cage structure
  *   heavy_device - Thickness setting (0, 1, 2)
  */
+// Compact sleeve: exact outside envelope is device + clearance + 2*wall.
+// Adjacent sleeves may overlap by one wall thickness to form a shared divider.
+// Front rail bonds into the faceplate; rear is selectable and slots leave solid
+// front/rear rails plus corner posts for support. No oversized reinforcing block.
+module compact_cage(offset_x, offset_y, w, h, d, clearance=1, wall=4,
+                    plate_thick=4, back_style="vent") {
+    iw = w + clearance;
+    ih = h + clearance;
+    ow = iw + 2*wall;
+    oh = ih + 2*wall;
+    front = plate_thick - 1;
+    rear = plate_thick + d + clearance;
+    translate([offset_x, offset_y, 0])
+    difference() {
+        translate([-ow/2, -oh/2, front])
+            cube([ow, oh, rear + wall - front]);
+        translate([-iw/2, -ih/2, front - 1])
+            cube([iw, ih, rear - front + (back_style == "none" ? wall + 2 : 1)]);
+        // Side ventilation; 8 mm front/rear rails and 4 mm corner rails.
+        if (d > 24 && ih > 16)
+            for (side = [-1, 1])
+                translate([side*ow/2 - wall - 1, -ih/2 + 4, plate_thick + 8])
+                    cube([2*wall + 2, ih - 8, d - 16]);
+        // Top/bottom ventilation. 10 mm ribs alternate with 10 mm slots.
+        if (d > 24 && iw > 24)
+            for (x = [-iw/2 + 6 : 20 : iw/2 - 16])
+                for (side = [-1, 1])
+                    translate([x, side*oh/2 - wall - 1, plate_thick + 8])
+                        cube([10, 2*wall + 2, d - 16]);
+        if (back_style == "vent" && ih > 16 && iw > 24)
+            for (x = [-iw/2 + 6 : 20 : iw/2 - 16])
+                translate([x, -ih/2 + 4, rear - 0.01])
+                    cube([10, ih - 8, wall + 1]);
+    }
+}
+
 module reinforcing_block(offset_x, offset_y, total_width, total_height, heavy_device=0)
 {
     translate([offset_x, offset_y, 7.5 + (heavy_device > 0 ? 2 : 0)])

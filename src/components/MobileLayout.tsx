@@ -144,7 +144,7 @@ export function MobileLayout() {
           if (dropZone) {
             const rect = dropZone.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
-            const baseScale = calculateFitScale(rect.width, rect.height, config.rackU, 40);
+            const baseScale = calculateFitScale(rect.width, rect.height, config.rackU, 40, config.panelWidth);
             const splitOffsetPx = config.splitPosition * baseScale;
             const splitLineX = centerX + splitOffsetPx;
             side = lastPointerPosition.current.x < splitLineX ? 'left' : 'right';
@@ -167,9 +167,9 @@ export function MobileLayout() {
       let scale: number;
       if (dropZone) {
         const rect = dropZone.getBoundingClientRect();
-        scale = calculateFitScale(rect.width, rect.height, config.rackU, 40) * zoom;
+        scale = calculateFitScale(rect.width, rect.height, config.rackU, 40, config.panelWidth) * zoom;
       } else {
-        scale = calculateFitScale(800, 600, config.rackU, 40) * zoom;
+        scale = calculateFitScale(800, 600, config.rackU, 40, config.panelWidth) * zoom;
       }
       const deltaXMm = delta.x / scale;
       const deltaYMm = -delta.y / scale;
@@ -183,7 +183,7 @@ export function MobileLayout() {
         newCenterX = snappedCornerX + dims.width / 2;
         newCenterY = snappedCornerY + dims.height / 2;
       }
-      const clamped = clampToRackBounds(newCenterX, newCenterY, dims.width, dims.height, config.rackU);
+      const clamped = clampToRackBounds(newCenterX, newCenterY, dims.width, dims.height, config.rackU, config.panelWidth);
       updateDevicePosition(placedDevice.id, clamped.x, clamped.y);
     }
   };

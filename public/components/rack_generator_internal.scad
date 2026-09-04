@@ -332,7 +332,11 @@ module _rg_device_mount(
     _back_open = (effective_back_style == "vent");
     _no_back = (effective_back_style == "none");
 
-    if (mount_type == "cage") {
+    if (mount_type == "compact") {
+        compact_cage(offset_x, offset_y, dev_w, dev_h, dev_d,
+                     clearance, 4 + heavy, plate_thick, effective_back_style);
+    }
+    else if (mount_type == "cage") {
         cage_structure(
             offset_x = offset_x,
             offset_y = offset_y,
