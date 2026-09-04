@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { useRackStore } from '../state/rack-store';
 import type { RackConfig } from '../state/types';
 import type { EarStyle, EarPosition } from '../state/types';
@@ -21,6 +21,42 @@ export function RackToolbar() {
   const [renderStatus, setRenderStatus] = useState<string | null>(null);
   const [, setWorkerInitialized] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const exportButtonRef = useRef<HTMLButtonElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!showExportMenu) return;
+    const positionMenu = () => {
+      const button = exportButtonRef.current;
+      const menu = exportMenuRef.current;
+      if (!button || !menu) return;
+      const anchor = button.getBoundingClientRect();
+      const bounds = menu.getBoundingClientRect();
+      const margin = 8;
+      // The toolbar can wrap Export onto the far left of a new row.
+      // Clamp both axes and let tall menus scroll inside the viewport.
+      menu.style.left = `${Math.max(margin, Math.min(anchor.right - bounds.width, window.innerWidth - bounds.width - margin))}px`;
+      menu.style.top = `${Math.max(margin, Math.min(anchor.bottom + 4, window.innerHeight - bounds.height - margin))}px`;
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowExportMenu(false);
+        exportButtonRef.current?.focus();
+      }
+    };
+    positionMenu();
+    const observer = new ResizeObserver(positionMenu);
+    if (exportMenuRef.current) observer.observe(exportMenuRef.current);
+    window.addEventListener('resize', positionMenu);
+    window.addEventListener('scroll', positionMenu, true);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', positionMenu);
+      window.removeEventListener('scroll', positionMenu, true);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [showExportMenu]);
 
   const {
     config,
@@ -530,6 +566,9 @@ export function RackToolbar() {
       {/* Export */}
       <div className="relative">
         <button
+          ref={exportButtonRef}
+          aria-expanded={showExportMenu}
+          aria-controls="rack-export-options"
           onClick={() => setShowExportMenu(!showExportMenu)}
           disabled={isExporting || isRendering}
           className={`px-3 py-1 text-white text-sm rounded transition-colors flex items-center gap-1 ${
@@ -558,7 +597,13 @@ export function RackToolbar() {
 
         {/* Dropdown Menu */}
         {showExportMenu && (
-          <div className="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-600 rounded shadow-lg py-1 min-w-[220px] z-50">
+          <div
+            ref={exportMenuRef}
+            id="rack-export-options"
+            role="group"
+            aria-label="Export options"
+            className="fixed bg-gray-800 border border-gray-600 rounded shadow-lg py-1 w-[260px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-16px)] overflow-y-auto overscroll-contain z-50"
+          >
             {config.isSplit ? (
               <>
                 <button
