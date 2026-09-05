@@ -84,9 +84,9 @@ export function MobileAidePanel() {
         <div className="space-y-3 text-sm text-gray-300">
           <p><strong className="text-white">2D Editor</strong></p>
           <ul className="list-disc list-inside space-y-1">
-            <li>Drag devices to reposition them on the rack panel</li>
+            <li>Tap a device to open its properties and adjust its position</li>
             <li>Select a device by tapping it</li>
-            <li>Shallow racks open enlarged: swipe horizontally in Pan mode and pinch directly on the rack to zoom in or out. Fit view shows the whole rack; Detail view enlarges it again.</li>
+            <li>Shallow racks open enlarged. Swipe across the rack to pan, and pinch directly on it to zoom in or out.</li>
             <li>Grid snapping helps with precise alignment</li>
           </ul>
           <p className="mt-3"><strong className="text-white">3D Preview</strong></p>
@@ -166,7 +166,7 @@ export function MobileAidePanel() {
           <ul className="list-disc list-inside space-y-1 text-xs">
             <li>Tap a device in the library to add it to the rack</li>
             <li>Use the 2D/3D toggle to switch views</li>
-            <li>Choose Pan in the editor to pinch to zoom and drag the view</li>
+            <li>Swipe to pan and pinch to zoom directly on the editor</li>
             <li>Pull down on any sheet to dismiss it</li>
           </ul>
         </div>

@@ -271,7 +271,7 @@ function TrimNotches({ rackBounds, hookPattern, trimPattern, rackU, earThickness
 export function RackConfigurator({ touchControls = false, onAddDevice, onEditDevice }: {
   touchControls?: boolean; onAddDevice?: () => void; onEditDevice?: () => void;
 }) {
-  const [panMode, setPanMode] = useState(touchControls);
+  const mobileTap = useRef<{ pointerId: number; x: number; y: number; deviceId: string | null; startedAt: number; cancelled: boolean } | null>(null);
   const automaticMobileView = useRef(true);
   const measured = useRef(false);
   const previousRackShape = useRef('');
@@ -285,8 +285,6 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
 
   const {
     config,
-    selectedDeviceId,
-    resetView,
     zoom,
     panX,
     panY,
@@ -412,7 +410,7 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
 
   // Deselect on background click (only if we didn't pan)
   const handleBackgroundClick = () => {
-    if (!isPanning) {
+    if (!touchControls && !isPanning) {
       selectDevice(null);
     }
   };
@@ -430,11 +428,11 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
 
   // Handle split line drag (only if not locked)
   const handleSplitMouseDown = useCallback((e: React.PointerEvent) => {
-    if (config.splitLocked || (touchControls && panMode)) return;
+    if (config.splitLocked || touchControls) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsDraggingSplit(true);
-  }, [config.splitLocked, touchControls, panMode]);
+  }, [config.splitLocked, touchControls]);
 
   const handleMouseMove = useCallback(
     (e: React.PointerEvent) => {
@@ -553,7 +551,14 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
         onClick={handleBackgroundClick}
         onPointerDown={(e) => {
           automaticMobileView.current = false;
-          if (touchControls && panMode) {
+          if (touchControls) {
+            if (touchPointers.current.size === 0) {
+              mobileTap.current = {
+                pointerId: e.pointerId, x: e.clientX, y: e.clientY,
+                deviceId: (e.target as Element).closest('[data-rack-device]')?.getAttribute('data-rack-device') ?? null,
+                startedAt: performance.now(), cancelled: false,
+              };
+            } else if (mobileTap.current) mobileTap.current.cancelled = true;
             e.currentTarget.setPointerCapture(e.pointerId);
             touchPointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
           } else if (!(e.target as Element).closest('[data-rack-device]')) {
@@ -564,6 +569,8 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
         onPointerMove={(e) => {
           const pointers = touchPointers.current;
           if (!pointers.has(e.pointerId)) { handleMouseMove(e); return; }
+          const tap = mobileTap.current;
+          if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) tap.cancelled = true;
           const before = [...pointers.values()];
           pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
           const after = [...pointers.values()];
@@ -584,9 +591,20 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
           const nextY = b.y - a.y + current.panY * actualFactor + (a.y - rect.top - rect.height / 2) * (1 - actualFactor);
           setPan(Math.max(-limits.maxPanX, Math.min(limits.maxPanX, nextX)), Math.max(-limits.maxPanY, Math.min(limits.maxPanY, nextY)));
         }}
-        onPointerUp={(e) => { touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
-        onPointerCancel={(e) => { touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
-        onLostPointerCapture={(e) => { touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
+        onPointerUp={(e) => {
+          const tap = mobileTap.current;
+          if (touchControls && tap && !tap.cancelled && tap.pointerId === e.pointerId
+            && performance.now() - tap.startedAt < 500
+            && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) <= 8) {
+            selectDevice(tap.deviceId);
+            if (tap.deviceId) onEditDevice?.();
+          }
+          mobileTap.current = null;
+          touchPointers.current.delete(e.pointerId);
+          handleMouseUp();
+        }}
+        onPointerCancel={(e) => { mobileTap.current = null; touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
+        onLostPointerCapture={(e) => { mobileTap.current = null; touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
       >
         {/* Background - handles panning */}
         <rect
@@ -808,7 +826,8 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
             device={device}
             view={view}
             isOverlapping={overlappingDevices.has(device.id)}
-            navigationMode={touchControls && panMode}
+            navigationMode={touchControls}
+            onInspect={onEditDevice}
           />
         ))}
 
@@ -849,23 +868,13 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
       </svg>
 
       {touchControls && <>
-        <div role="toolbar" aria-label="2D view controls" className="absolute top-3 left-3 right-3 flex justify-center gap-1 bg-gray-800 border border-gray-600 rounded-lg p-1 text-white text-sm">
-          <button aria-pressed={!panMode} onClick={() => setPanMode(false)} className={`px-3 rounded ${!panMode ? 'bg-blue-600' : ''}`}>Edit</button>
-          <button aria-pressed={panMode} onClick={() => setPanMode(true)} className={`px-3 rounded ${panMode ? 'bg-blue-600' : ''}`}>Pan</button>
-          <button onClick={() => {
-            automaticMobileView.current = false;
-            if (zoom <= 1.05 && mobileView.zoom > 1.15) {
-              setZoom(mobileView.zoom); setPan(mobileView.panX, 0);
-            } else resetView();
-          }} className="px-3 whitespace-nowrap">{zoom <= 1.05 && mobileView.zoom > 1.15 ? 'Detail view' : 'Fit view'}</button>
-        </div>
-        <p className="absolute top-20 left-3 right-3 text-center text-xs text-gray-400 pointer-events-none">
-          {panMode ? (getPanLimits().maxPanX > 0 ? 'Swipe to move · Pinch to zoom in or out' : 'Pinch to zoom in or out') : 'Tap to select · Drag to move · Use Pan to scroll'}
+        <p className="absolute top-3 left-3 right-3 text-center text-xs text-gray-400 pointer-events-none">
+          Swipe to pan · Pinch to zoom · Tap a device to edit
         </p>
         <div className="absolute bottom-4 left-4 right-24 text-center">
           {allDevices.length === 0 ? <div className="space-y-2">
             <button onClick={onAddDevice} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Add devices</button>
-          </div> : selectedDeviceId ? <button onClick={onEditDevice} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Edit selected device</button> : null}
+          </div> : null}
         </div>
       </>}
 

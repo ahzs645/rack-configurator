@@ -53,9 +53,10 @@ interface DeviceOnRackProps {
   view: ViewConfig;
   isOverlapping?: boolean;
   navigationMode?: boolean;
+  onInspect?: () => void;
 }
 
-export function DeviceOnRack({ device, view, isOverlapping = false, navigationMode = false }: DeviceOnRackProps) {
+export function DeviceOnRack({ device, view, isOverlapping = false, navigationMode = false, onInspect }: DeviceOnRackProps) {
   const { config, selectDevice, updateDeviceMountType, snapToGrid, gridSize } = useRackStore();
   const [showMountMenu, setShowMountMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -134,7 +135,6 @@ export function DeviceOnRack({ device, view, isOverlapping = false, navigationMo
     cursor: isDragging ? 'grabbing' : 'grab',
     outline: 'none',
     touchAction: 'none',
-    pointerEvents: navigationMode ? 'none' : undefined,
   };
 
   // Determine colors based on mount type and state
@@ -152,12 +152,17 @@ export function DeviceOnRack({ device, view, isOverlapping = false, navigationMo
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Touch taps are distinguished from swipes/pinches by the rack viewport.
+    // Keyboard and assistive-technology activation still opens the properties.
+    if (navigationMode && e.detail !== 0) return;
     selectDevice(device.id);
+    if (navigationMode) onInspect?.();
   };
 
   const handleRightClick = (e: React.MouseEvent<SVGGElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if (navigationMode) return;
     selectDevice(device.id);
     // Use clientX/clientY for fixed positioning (relative to viewport)
     setMenuPosition({ x: e.clientX, y: e.clientY });
@@ -217,6 +222,15 @@ export function DeviceOnRack({ device, view, isOverlapping = false, navigationMo
       style={style}
       {...listeners}
       {...attributes}
+      aria-disabled={navigationMode ? undefined : attributes['aria-disabled']}
+      aria-label={navigationMode ? `Edit ${dims.name}` : undefined}
+      onKeyDown={navigationMode ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectDevice(device.id);
+          onInspect?.();
+        }
+      } : listeners?.onKeyDown}
       onClick={handleClick}
       onContextMenu={handleRightClick}
       className="device-on-rack"
