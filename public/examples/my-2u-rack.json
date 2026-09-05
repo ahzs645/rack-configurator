@@ -1,0 +1,79 @@
+{
+  "rackU": 2,
+  "panelWidth": 440.5,
+  "earStyle": "toolless",
+  "earPosition": "bottom",
+  "earThickness": 2.9,
+  "toollessHookPattern": [
+    false,
+    true
+  ],
+  "toollessHookTrimPattern": [
+    true,
+    false
+  ],
+  "backStyle": "vent",
+  "ventType": "honeycomb",
+  "hexDiameter": 8,
+  "hexWall": 2,
+  "cutoutEdge": 3,
+  "cutoutRadius": 3,
+  "plateThickness": 4,
+  "cornerRadius": 0,
+  "clearance": 1,
+  "heavyDevice": 0,
+  "showPreview": true,
+  "showLabels": true,
+  "isSplit": true,
+  "splitPosition": 20,
+  "splitLocked": false,
+  "renderMode": "both",
+  "joinerType": "screw",
+  "joinerNutSide": "right",
+  "joinerNutDepth": 4.5,
+  "joinerScrewType": "M3",
+  "joinerNutFloor": 0,
+  "devices": [],
+  "leftDevices": [
+    {
+      "id": "7qnzrbi46k2b768b8bj6yf",
+      "deviceId": "ucg_fiber",
+      "offsetX": -102.775,
+      "offsetY": -22.5,
+      "mountType": "compact",
+      "backStyle": "none",
+      "orientation": "normal",
+      "sharedMountGroup": "shared-74300banxx6snj68u3tae-7qnzrbi46k2b768b8bj6yf"
+    },
+    {
+      "id": "74300banxx6snj68u3tae",
+      "deviceId": "glinet_comet_x",
+      "offsetX": -102.775,
+      "offsetY": 17.5,
+      "mountType": "compact",
+      "orientation": "normal",
+      "sharedMountGroup": "shared-74300banxx6snj68u3tae-7qnzrbi46k2b768b8bj6yf",
+      "backStyle": "none"
+    }
+  ],
+  "rightDevices": [
+    {
+      "id": "2ch97leukbgshejqonpck8",
+      "deviceId": "minisforum_ai_x1",
+      "offsetX": 99.275,
+      "offsetY": 0,
+      "mountType": "cage",
+      "backStyle": "none",
+      "orientation": "normal"
+    },
+    {
+      "id": "9edwrb2u1s5aqwne8f3zo",
+      "deviceId": "raspberry_pi_5_waveshare_poe",
+      "offsetX": 195.025,
+      "offsetY": 0,
+      "mountType": "cage",
+      "backStyle": "none",
+      "orientation": "side"
+    }
+  ]
+}
