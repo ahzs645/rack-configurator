@@ -218,7 +218,7 @@ export function PropertyPanel() {
         {allPlacedDevices.length === 0 && !config.isSplit ? (
           <div className="text-gray-500 text-xs text-center py-4">
             No devices placed yet.<br />
-            Drag devices from the library.
+            Add devices from the library.
           </div>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">

@@ -293,11 +293,11 @@ export function generateScadCodeForSide(config: RackConfig, side: 'left' | 'righ
 /**
  * Download both split sides as separate STL files in a ZIP
  */
-export async function downloadSplitStlZip(
+export async function createSplitStlZip(
   leftStl: ArrayBuffer,
   rightStl: ArrayBuffer,
   config: RackConfig
-): Promise<void> {
+): Promise<Blob> {
   const zip = new JSZip();
 
   // Generate filenames for each side
@@ -308,11 +308,12 @@ export async function downloadSplitStlZip(
   zip.file(leftFilename, leftStl);
   zip.file(rightFilename, rightStl);
 
-  // Generate ZIP filename
-  const zipFilename = `rack_${config.rackU}u_split_${config.leftDevices.length + config.rightDevices.length}dev.zip`;
+  return zip.generateAsync({ type: 'blob' });
+}
 
-  // Generate and download the ZIP
-  const zipBlob = await zip.generateAsync({ type: 'blob' });
+export async function downloadSplitStlZip(leftStl: ArrayBuffer, rightStl: ArrayBuffer, config: RackConfig): Promise<void> {
+  const zipBlob = await createSplitStlZip(leftStl, rightStl, config);
+  const zipFilename = `rack_${config.rackU}u_split_${config.leftDevices.length + config.rightDevices.length}dev.zip`;
   const url = URL.createObjectURL(zipBlob);
 
   const a = document.createElement('a');

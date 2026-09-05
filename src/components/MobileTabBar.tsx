@@ -1,4 +1,4 @@
-export type MobileTab = 'editor' | 'devices' | 'properties' | 'settings' | 'aide';
+export type MobileTab = 'editor' | 'devices' | 'properties' | 'settings' | 'files';
 
 interface MobileTabBarProps {
   activeTab: MobileTab;
@@ -52,24 +52,25 @@ export function MobileTabBar({ activeTab, onTabChange, deviceCount }: MobileTabB
       ),
     },
     {
-      id: 'aide',
-      label: 'Aide',
+      id: 'files',
+      label: 'Files',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" />
         </svg>
       ),
     },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-gray-900 border-t border-gray-700 safe-area-bottom">
+    <nav aria-label="Rack navigation" className="relative shrink-0 z-50 bg-gray-900 border-t border-gray-700 safe-area-bottom">
       <div className="flex items-center justify-around h-14">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => onTabChange(tab.id)}
               className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors relative ${
                 isActive

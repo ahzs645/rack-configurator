@@ -34,7 +34,7 @@ export function MobileAidePanel() {
             <li><strong className="text-white">Add devices</strong> - Browse the Devices tab and tap to add</li>
             <li><strong className="text-white">Position devices</strong> - Drag devices on the 2D editor to arrange</li>
             <li><strong className="text-white">Configure properties</strong> - Select a device and adjust its mount type, position, and dimensions</li>
-            <li><strong className="text-white">Export</strong> - Download as STL for 3D printing, or SCAD for further editing</li>
+            <li><strong className="text-white">Export</strong> - Open Files, choose STL or SCAD, then tap Download when ready</li>
           </ol>
         </div>
       ),
@@ -86,14 +86,14 @@ export function MobileAidePanel() {
           <ul className="list-disc list-inside space-y-1">
             <li>Drag devices to reposition them on the rack panel</li>
             <li>Select a device by tapping it</li>
-            <li>Use pinch-to-zoom and pan to navigate</li>
+            <li>Switch to Pan to drag the view or pinch to zoom. Fit view recenters the rack.</li>
             <li>Grid snapping helps with precise alignment</li>
           </ul>
           <p className="mt-3"><strong className="text-white">3D Preview</strong></p>
           <ul className="list-disc list-inside space-y-1">
             <li>Real-time 3D visualization of your rack panel</li>
             <li>Rotate by dragging, zoom with pinch gesture</li>
-            <li>Rendered using Three.js with OpenSCAD backend</li>
+            <li>Use two fingers to pan and pinch to zoom</li>
           </ul>
         </div>
       ),
@@ -111,7 +111,7 @@ export function MobileAidePanel() {
           <ul className="space-y-2">
             <li>
               <strong className="text-white">STL (3D Print Ready)</strong>
-              <p className="text-gray-400 text-xs mt-0.5">Rendered via WebAssembly - ready for your slicer</p>
+              <p className="text-gray-400 text-xs mt-0.5">Choose a format in Files, wait for rendering, then tap Download to save it for your slicer.</p>
             </li>
             <li>
               <strong className="text-white">SCAD (Self-contained)</strong>
@@ -166,7 +166,7 @@ export function MobileAidePanel() {
           <ul className="list-disc list-inside space-y-1 text-xs">
             <li>Tap a device in the library to add it to the rack</li>
             <li>Use the 2D/3D toggle to switch views</li>
-            <li>Pinch to zoom, drag to pan on the editor</li>
+            <li>Choose Pan in the editor to pinch to zoom and drag the view</li>
             <li>Pull down on any sheet to dismiss it</li>
           </ul>
         </div>

@@ -3,10 +3,12 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { fitViewerCamera, zoomViewerCamera } from '../utils/viewer-camera';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { useRackStore } from '../state/rack-store';
 import { useLiveScadRender } from '../hooks/useLiveScadRender';
 
 export function MainViewer3D() {
+  const isMobile = useIsMobile();
   const { config } = useRackStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
@@ -210,7 +212,7 @@ export function MainViewer3D() {
       <div ref={containerRef} className="absolute inset-0" />
 
       <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap items-center gap-2 pointer-events-none">
-        <div role="toolbar" aria-label="3D view controls" className="flex gap-1 bg-gray-900/90 border border-gray-600 rounded-lg p-1 pointer-events-auto text-xs text-white">
+        <div role="toolbar" aria-label="3D view controls" className="flex flex-wrap gap-1 bg-gray-900/90 border border-gray-600 rounded-lg p-1 pointer-events-auto text-xs text-white">
           <button aria-pressed={dragMode === 'rotate'} onClick={() => setDragMode('rotate')} title="Drag to rotate; Shift-drag or right-drag to pan"
             className={`px-3 py-2 rounded ${dragMode === 'rotate' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}>Rotate</button>
           <button aria-pressed={dragMode === 'pan'} onClick={() => setDragMode('pan')} title="Drag to move the view"
@@ -220,7 +222,7 @@ export function MainViewer3D() {
           <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomView(1.25)} className="px-3 py-2 rounded hover:bg-gray-700">−</button>
           <button onClick={fitView} title="Recenter and fit the entire rack" className="px-3 py-2 rounded hover:bg-gray-700">Fit view</button>
         </div>
-        <p className="text-xs text-gray-300 bg-gray-900/80 rounded px-2 py-1">{dragMode === 'rotate' ? 'Drag to rotate' : 'Drag to pan'} · Shift/right-drag to pan in Rotate mode · Scroll to zoom toward cursor</p>
+        <p className="text-xs text-gray-300 bg-gray-900/80 rounded px-2 py-1">{isMobile ? 'One finger to ' + dragMode + ' · Two fingers to pan / pinch to zoom' : (dragMode === 'rotate' ? 'Drag to rotate' : 'Drag to pan') + ' · Shift/right-drag to pan · Scroll to zoom toward cursor'}</p>
       </div>
 
       {/* Loading overlay */}

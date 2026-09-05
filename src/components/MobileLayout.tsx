@@ -1,15 +1,15 @@
 import { useState, useCallback, useRef } from 'react';
-import { DndContext, useSensor, useSensors, PointerSensor, DragOverlay, TouchSensor } from '@dnd-kit/core';
+import { DndContext, useSensor, useSensors, PointerSensor, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent, DragMoveEvent } from '@dnd-kit/core';
+import { useMobileViewportHeight } from '../hooks/useMobileViewportHeight';
 import { MobileTabBar } from './MobileTabBar';
 import type { MobileTab } from './MobileTabBar';
 import { MobileSheet } from './MobileSheet';
 import { MobileSettingsPanel } from './MobileSettingsPanel';
-import { MobileAidePanel } from './MobileAidePanel';
 import { MobileDeviceLibrary } from './MobileDeviceLibrary';
 import { PropertyPanel } from './PropertyPanel';
 import { RackConfigurator } from './RackConfigurator';
-import { MainViewer3D } from './MainViewer3D';
+import { RackPreview3D } from './RackPreview3D';
 import { useRackStore } from '../state/rack-store';
 import type { RackDevice } from '../data/devices';
 import { getDevice } from '../data/devices';
@@ -29,6 +29,7 @@ function DragPreview({ device }: { device: RackDevice }) {
 }
 
 export function MobileLayout() {
+  const viewportHeight = useMobileViewportHeight();
   const {
     config,
     snapToGrid,
@@ -94,21 +95,12 @@ export function MobileLayout() {
     devices: 'Device Library',
     properties: 'Properties',
     settings: 'Settings',
-    aide: 'Aide',
-  }[activeTab];
-
-  const sheetHeight = {
-    editor: 'half' as const,
-    devices: 'full' as const,
-    properties: 'full' as const,
-    settings: 'full' as const,
-    aide: 'full' as const,
+    files: 'Files & sharing',
   }[activeTab];
 
   // DnD sensors - with touch support for mobile
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -204,7 +196,8 @@ export function MobileLayout() {
       onDragCancel={handleDragCancel}
     >
       <div
-        className="h-screen flex flex-col bg-gray-900 overflow-hidden relative"
+        className="app-shell mobile-shell flex flex-col bg-gray-900 overflow-hidden relative"
+        style={{ height: viewportHeight, '--app-height': `${viewportHeight}px` } as React.CSSProperties}
         onDragEnter={handleFileDragEnter}
         onDragLeave={handleFileDragLeave}
         onDragOver={handleFileDragOver}
@@ -223,18 +216,20 @@ export function MobileLayout() {
         )}
 
         {/* Mobile header bar */}
-        <header className="bg-gray-800 border-b border-gray-700 px-3 py-2 flex items-center justify-between flex-shrink-0 safe-area-top">
-          <div className="flex items-center gap-2">
-            <h1 className="text-sm font-semibold text-white truncate">Rack Configurator</h1>
-            <span className="text-xs text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded">
-              {config.rackU}U
-            </span>
+        <header className="bg-gray-800 border-b border-gray-700 px-3 py-2 flex items-center justify-between flex-shrink-0 mobile-header">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold text-white truncate">Rack Configurator</h1>
+              <span className="text-xs text-gray-300 bg-gray-700 px-1.5 py-0.5 rounded">
+                {config.rackU}U
+              </span>
+            </div>
+            <p className="text-xs text-gray-400">{totalDevices} device{totalDevices !== 1 ? 's' : ''}</p>
           </div>
-
           {/* View mode toggle */}
           <div className="flex items-center gap-1 bg-gray-900 rounded-lg p-0.5">
             <button
-              onClick={() => setMainViewMode('2d')}
+              aria-pressed={mainViewMode === '2d'} aria-label="2D Editor" onClick={() => setMainViewMode('2d')}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                 mainViewMode === '2d'
                   ? 'bg-blue-600 text-white'
@@ -244,7 +239,7 @@ export function MobileLayout() {
               2D
             </button>
             <button
-              onClick={() => setMainViewMode('3d')}
+              aria-pressed={mainViewMode === '3d'} aria-label="3D Preview" onClick={() => setMainViewMode('3d')}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                 mainViewMode === '3d'
                   ? 'bg-blue-600 text-white'
@@ -254,19 +249,14 @@ export function MobileLayout() {
               3D
             </button>
           </div>
-
-          {/* Device count */}
-          <div className="text-xs text-gray-500">
-            {totalDevices} device{totalDevices !== 1 ? 's' : ''}
-          </div>
         </header>
 
         {/* Main editor view - takes all available space */}
-        <div className="flex-1 overflow-hidden" style={{ paddingBottom: '56px' }}>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {mainViewMode === '2d' ? (
-            <RackConfigurator />
+            <RackConfigurator touchControls onAddDevice={() => setActiveTab('devices')} onEditDevice={() => setActiveTab('properties')} />
           ) : (
-            <MainViewer3D />
+            <RackPreview3D />
           )}
         </div>
 
@@ -275,7 +265,6 @@ export function MobileLayout() {
           isOpen={isSheetOpen}
           onClose={handleCloseSheet}
           title={sheetTitle}
-          height={sheetHeight}
         >
           {activeTab === 'devices' && <MobileDeviceLibrary />}
           {activeTab === 'properties' && (
@@ -283,8 +272,9 @@ export function MobileLayout() {
               <PropertyPanel />
             </div>
           )}
-          {activeTab === 'settings' && <MobileSettingsPanel />}
-          {activeTab === 'aide' && <MobileAidePanel />}
+          <div hidden={activeTab !== 'settings' && activeTab !== 'files'}>
+            <MobileSettingsPanel view={activeTab === 'files' ? 'files' : 'settings'} />
+          </div>
         </MobileSheet>
 
         {/* Bottom tab bar */}

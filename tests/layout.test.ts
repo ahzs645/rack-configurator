@@ -170,3 +170,74 @@ test('standalone export resolves nested SCAD files and uses oriented dimensions'
     assert.doesNotMatch(code, /^\s*(use|include)\s+</m);
   } finally { globalThis.fetch = original; clearComponentCache(); }
 });
+
+test('share links decode raw deflate and older zlib wrappers without browser compression APIs', async () => {
+  const { deflateRawSync, deflateSync } = await import('node:zlib');
+  const expected = JSON.parse(JSON.stringify(source));
+  for (const encode of [deflateRawSync, deflateSync]) {
+    const encoded = encode(JSON.stringify(expected)).toString('base64url');
+    assert.deepEqual(await decompressConfig(encoded), expected);
+  }
+  await assert.rejects(decompressConfig('truncated-link'));
+});
+
+test('working racks survive reload, including an intentionally cleared layout, and denied storage is safe', async () => {
+  const { readWorkingRack, saveWorkingRack } = await import('../src/utils/working-rack');
+  const values = new Map<string, string>();
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  try {
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    } });
+    assert.equal(readWorkingRack(), null);
+    const rack = fitTo2U(source, options).config!;
+    assert.equal(saveWorkingRack(rack), true);
+    assert.deepEqual(readWorkingRack(), JSON.parse(JSON.stringify(rack)));
+    const empty = { ...rack, devices: [], leftDevices: [], rightDevices: [] };
+    saveWorkingRack(empty);
+    assert.deepEqual(readWorkingRack(), JSON.parse(JSON.stringify(empty)));
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('Storage denied'); } });
+    assert.equal(readWorkingRack(), null);
+    assert.equal(saveWorkingRack(rack), false);
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'localStorage', original);
+    else Reflect.deleteProperty(globalThis, 'localStorage');
+  }
+});
+
+test('missing links return no config, but invalid or unavailable shared racks raise an error', async () => {
+  const { loadConfigFromUrl } = await import('../src/utils/url-sharing');
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  const originalFetch = globalThis.fetch;
+  const location = { search: '' };
+  try {
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: { location } });
+    assert.equal(await loadConfigFromUrl(), null);
+    location.search = '?c=broken-link';
+    await assert.rejects(loadConfigFromUrl());
+    location.search = '?url=examples/my-2u-rack.json';
+    globalThis.fetch = async () => new Response(JSON.stringify(source));
+    assert.deepEqual(await loadConfigFromUrl(), JSON.parse(JSON.stringify(source)));
+    globalThis.fetch = async () => new Response('{}');
+    await assert.rejects(loadConfigFromUrl());
+    globalThis.fetch = async () => new Response('', { status: 404 });
+    await assert.rejects(loadConfigFromUrl());
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow);
+    else Reflect.deleteProperty(globalThis, 'window');
+  }
+});
+
+test('mobile split export prepares a downloadable ZIP containing both unchanged STL files', async () => {
+  const { createSplitStlZip, generateFilename } = await import('../src/utils/scad-generator');
+  const { default: JSZip } = await import('jszip');
+  const left = new TextEncoder().encode('solid left\nendsolid left').buffer;
+  const right = new TextEncoder().encode('solid right\nendsolid right').buffer;
+  const blob = await createSplitStlZip(left, right, source);
+  const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+  assert.deepEqual(Object.keys(zip.files).sort(), [generateFilename(source, 'stl', 'left'), generateFilename(source, 'stl', 'right')].sort());
+  assert.deepEqual(await zip.file(generateFilename(source, 'stl', 'left'))!.async('arraybuffer'), left);
+  assert.deepEqual(await zip.file(generateFilename(source, 'stl', 'right'))!.async('arraybuffer'), right);
+});

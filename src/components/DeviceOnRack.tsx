@@ -52,9 +52,10 @@ interface DeviceOnRackProps {
   device: PlacedDevice;
   view: ViewConfig;
   isOverlapping?: boolean;
+  navigationMode?: boolean;
 }
 
-export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRackProps) {
+export function DeviceOnRack({ device, view, isOverlapping = false, navigationMode = false }: DeviceOnRackProps) {
   const { config, selectDevice, updateDeviceMountType, snapToGrid, gridSize } = useRackStore();
   const [showMountMenu, setShowMountMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -78,6 +79,7 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
   const y = centerSvg.y - heightSvg / 2;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    disabled: navigationMode,
     id: device.id,
     data: {
       type: 'placed-device',
@@ -131,6 +133,8 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
     transform: getSnappedTransform(),
     cursor: isDragging ? 'grabbing' : 'grab',
     outline: 'none',
+    touchAction: 'none',
+    pointerEvents: navigationMode ? 'none' : undefined,
   };
 
   // Determine colors based on mount type and state
@@ -208,6 +212,7 @@ export function DeviceOnRack({ device, view, isOverlapping = false }: DeviceOnRa
 
   return (
     <g
+      data-rack-device={device.id}
       ref={setNodeRef as unknown as React.Ref<SVGGElement>}
       style={style}
       {...listeners}

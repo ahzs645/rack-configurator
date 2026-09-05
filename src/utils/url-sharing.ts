@@ -1,13 +1,9 @@
 import type { RackConfig } from '../state/types';
 
-/**
- * Share-link codec.
- *
- * Config JSON is deflated with the browser-native CompressionStream API and
- * encoded as URL-safe base64 (no padding). This has no Node.js dependencies:
- * the previous @firstform/json-url codec relied on Node's `Buffer` and `util`
- * globals, so every ?c= link failed in the browser with "Buffer is not defined".
- */
+import { deflateSync, decompressSync, strToU8, strFromU8 } from 'fflate';
+
+// Keep share links usable on Safari versions without deflate-raw streams.
+// The decoder accepts both the original raw-deflate and zlib-wrapped links.
 
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = '';
@@ -28,29 +24,21 @@ function base64UrlToBytes(text: string): Uint8Array {
   return bytes;
 }
 
-async function pipeThrough(bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
-  const response = new Response(new Blob([bytes as BlobPart]).stream().pipeThrough(stream));
-  return new Uint8Array(await response.arrayBuffer());
-}
-
 export async function compressConfig(config: RackConfig): Promise<string> {
-  const json = new TextEncoder().encode(JSON.stringify(config));
-  const deflated = await pipeThrough(json, new CompressionStream('deflate-raw'));
-  return bytesToBase64Url(deflated);
+  return bytesToBase64Url(deflateSync(strToU8(JSON.stringify(config))));
 }
 
 export async function decompressConfig(encoded: string): Promise<RackConfig> {
-  const inflated = await pipeThrough(base64UrlToBytes(encoded), new DecompressionStream('deflate-raw'));
-  return JSON.parse(new TextDecoder().decode(inflated)) as RackConfig;
+  return JSON.parse(strFromU8(decompressSync(base64UrlToBytes(encoded)))) as RackConfig;
 }
 
-function isRackConfig(config: unknown): config is RackConfig {
-  return (
-    !!config &&
-    typeof config === 'object' &&
-    typeof (config as RackConfig).rackU === 'number' &&
-    Array.isArray((config as RackConfig).devices)
-  );
+export function isRackConfig(config: unknown): config is RackConfig {
+  if (!config || typeof config !== 'object') return false;
+  const rack = config as RackConfig;
+  if (!Number.isInteger(rack.rackU) || rack.rackU < 1 || rack.rackU > 6 || !Array.isArray(rack.devices)) return false;
+  return [rack.devices, rack.leftDevices ?? [], rack.rightDevices ?? []].every(list =>
+    Array.isArray(list) && list.every(device => device && typeof device.id === 'string'
+      && typeof device.deviceId === 'string' && Number.isFinite(device.offsetX) && Number.isFinite(device.offsetY)));
 }
 
 /**
@@ -68,36 +56,29 @@ export async function generateShareUrl(config: RackConfig): Promise<string> {
 /**
  * Try to extract and decompress a RackConfig from the current page URL.
  * Also supports loading from a remote JSON URL via ?url= parameter.
- * Returns null if no config is present or if decompression/fetch fails.
+ * Returns null only when there is no link; invalid links produce a visible error.
  */
 export async function loadConfigFromUrl(): Promise<RackConfig | null> {
   const params = new URLSearchParams(window.location.search);
 
-  // Check for remote JSON URL first (?url=<json_url>)
   const jsonUrl = params.get('url');
-  if (jsonUrl) {
-    try {
-      const response = await fetch(jsonUrl);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const config: unknown = await response.json();
-      return isRackConfig(config) ? config : null;
-    } catch (e) {
-      console.error('Failed to load config from URL:', e);
-      return null;
-    }
-  }
-
-  // Fall back to compressed config (?c=<compressed>)
   const compressed = params.get('c');
-  if (!compressed) return null;
+  if (!params.has('url') && !params.has('c')) return null;
 
-  try {
-    const config: unknown = await decompressConfig(compressed);
-    return isRackConfig(config) ? config : null;
-  } catch (e) {
-    console.error('Failed to decompress config from URL:', e);
-    return null;
+  let config: unknown;
+  if (jsonUrl) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(jsonUrl, { signal: controller.signal });
+      if (!response.ok) throw new Error('The saved rack could not be downloaded.');
+      config = await response.json();
+    } finally { clearTimeout(timeout); }
+  } else if (compressed) {
+    config = await decompressConfig(compressed);
   }
+  if (!isRackConfig(config)) throw new Error('This rack link is incomplete or invalid.');
+  return config;
 }
 
 /**

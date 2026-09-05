@@ -1,17 +1,26 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { MobileAidePanel } from './MobileAidePanel';
 import { useRackStore } from '../state/rack-store';
 import type { EarStyle, EarPosition, RackConfig } from '../state/types';
 import { EAR_STYLE_LABELS, getToollessHookCount } from '../state/types';
 import { ToollessHooksModal } from './ToollessHooksModal';
 import { AdvancedSettingsModal } from './AdvancedSettingsModal';
-import { downloadScadFile, downloadConfigJson, generateScadCode, generateScadCodeForSide, downloadStl, downloadSplitStlZip } from '../utils/scad-generator';
-import { downloadBundledScadFile } from '../utils/scad-bundler';
+import { generateFilename, exportConfigJson, generateScadCode, generateScadCodeForSide, createSplitStlZip } from '../utils/scad-generator';
+import { generateBundledScadCode } from '../utils/scad-bundler';
 import { saveRecentRack } from '../utils/recent-racks-db';
 import { initializeWorker, renderScad, setStatusCallback, isWorkerReady } from '../worker/openscad-runner';
 import { generateShareUrl } from '../utils/url-sharing';
 import { parseConfigJson } from '../utils/scad-generator';
 
-export function MobileSettingsPanel() {
+export function MobileSettingsPanel({ view = 'settings' }: { view?: 'settings' | 'files' }) {
+  const [shareUrl, setShareUrl] = useState('');
+  const [download, setDownload] = useState<{ url: string; name: string } | null>(null);
+  useEffect(() => () => { if (download) URL.revokeObjectURL(download.url); }, [download]);
+  const prepareDownload = (blob: Blob, name: string) => {
+    setDownload({ url: URL.createObjectURL(blob), name });
+    setRenderStatus('Ready — tap Download to save your file.');
+  };
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showHooksModal, setShowHooksModal] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
@@ -42,27 +51,30 @@ export function MobileSettingsPanel() {
   const handleShare = async () => {
     try {
       const url = await generateShareUrl(config);
+      setShareUrl(url);
+      if (navigator.share) {
+        try { await navigator.share({ title: `${config.rackU}U rack configuration`, url }); return; }
+        catch (error) { if (error instanceof Error && error.name === 'AbortError') return; }
+      }
       await navigator.clipboard.writeText(url);
       setRenderStatus('Share link copied!');
-    } catch (e) {
-      console.error('Failed to generate share URL:', e);
-      setRenderStatus('Error: Failed to generate share link');
+    } catch {
+      setRenderStatus('Select and copy the link below to share your rack.');
     }
-    setTimeout(() => setRenderStatus(null), 3000);
   };
 
   const handleExportScad = async () => {
-    downloadScadFile(config);
-    try { await saveRecentRack(config); } catch (e) { console.error(e); }
+    prepareDownload(new Blob([generateScadCode(config)], { type: 'text/plain' }), generateFilename(config, 'scad'));
+    try { await saveRecentRack(config).catch(console.error); } catch (e) { console.error(e); }
   };
 
   const handleExportBundledScad = async () => {
     setIsExporting(true);
     setRenderStatus('Bundling...');
     try {
-      await downloadBundledScadFile(config);
-      setRenderStatus('Done!');
-      await saveRecentRack(config);
+      const code = await generateBundledScadCode(config);
+      prepareDownload(new Blob([code], { type: 'text/plain' }), generateFilename(config, 'scad').replace('.scad', '_bundled.scad'));
+      await saveRecentRack(config).catch(console.error);
     } catch (e) {
       setRenderStatus(`Error: ${e instanceof Error ? e.message : 'Unknown'}`);
     } finally {
@@ -72,8 +84,8 @@ export function MobileSettingsPanel() {
   };
 
   const handleExportJson = async () => {
-    downloadConfigJson(config);
-    try { await saveRecentRack(config); } catch (e) { console.error(e); }
+    prepareDownload(new Blob([exportConfigJson(config)], { type: 'application/json' }), 'rack_config.json');
+    try { await saveRecentRack(config).catch(console.error); } catch (e) { console.error(e); }
   };
 
   const handleExportStl = async () => {
@@ -90,9 +102,8 @@ export function MobileSettingsPanel() {
       const scadCode = generateScadCode(config, false);
       const result = await renderScad({ scadCode, outputFormat: 'stl', variables: { '$preview': false } });
       if (result.success && result.output) {
-        downloadStl(result.output, config);
-        setRenderStatus('Done!');
-        await saveRecentRack(config);
+        prepareDownload(new Blob([result.output], { type: 'application/sla' }), generateFilename(config, 'stl'));
+        await saveRecentRack(config).catch(console.error);
       } else {
         setRenderStatus(`Error: ${result.error || 'Unknown'}`);
       }
@@ -118,9 +129,8 @@ export function MobileSettingsPanel() {
       const scadCode = generateScadCodeForSide(config, side);
       const result = await renderScad({ scadCode, outputFormat: 'stl', variables: { '$preview': false } });
       if (result.success && result.output) {
-        downloadStl(result.output, config, side);
-        setRenderStatus('Done!');
-        await saveRecentRack(config);
+        prepareDownload(new Blob([result.output], { type: 'application/sla' }), generateFilename(config, 'stl', side));
+        await saveRecentRack(config).catch(console.error);
       } else {
         setRenderStatus(`Error: ${result.error || 'Unknown'}`);
       }
@@ -149,9 +159,9 @@ export function MobileSettingsPanel() {
       const rightResult = await renderScad({ scadCode: generateScadCodeForSide(config, 'right'), outputFormat: 'stl', variables: { '$preview': false } });
       if (!rightResult.success || !rightResult.output) throw new Error(rightResult.error || 'Failed right');
       setRenderStatus('Creating ZIP...');
-      await downloadSplitStlZip(leftResult.output, rightResult.output, config);
-      setRenderStatus('Done!');
-      await saveRecentRack(config);
+      const blob = await createSplitStlZip(leftResult.output, rightResult.output, config);
+      prepareDownload(blob, generateFilename(config, 'zip'));
+      await saveRecentRack(config).catch(console.error);
     } catch (e) {
       setRenderStatus(`Error: ${e instanceof Error ? e.message : 'Unknown'}`);
     } finally {
@@ -185,21 +195,20 @@ export function MobileSettingsPanel() {
 
   return (
     <div className="p-4 space-y-6">
-      {/* Status toast */}
-      {renderStatus && (
-        <div className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 text-center">
-          {renderStatus}
-        </div>
-      )}
+      <div className="sticky top-0 z-10 bg-gray-800 space-y-2">
+        {renderStatus && <p role="status" className="bg-gray-900 rounded-lg px-3 py-2 text-sm text-gray-300">{renderStatus}</p>}
+        {download && <a href={download.url} download={download.name} className="block bg-blue-600 text-white rounded-lg px-3 py-3 text-sm break-all">Download {download.name}</a>}
+      </div>
 
       {/* Rack Configuration */}
-      <section>
+      <section hidden={view !== 'settings'}>
         <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Rack Configuration</h3>
         <div className="space-y-3">
           {/* Rack Size */}
           <div className="flex items-center justify-between">
             <label className="text-sm text-gray-300">Rack Size</label>
             <select
+              aria-label="Rack size"
               value={config.rackU}
               onChange={(e) => setRackU(Number(e.target.value) as 1 | 2 | 3 | 4 | 5 | 6)}
               className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
@@ -217,6 +226,7 @@ export function MobileSettingsPanel() {
           <div className="flex items-center justify-between">
             <label className="text-sm text-gray-300">Ear Style</label>
             <select
+              aria-label="Ear style"
               value={config.earStyle}
               onChange={(e) => setEarStyle(e.target.value as EarStyle)}
               className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
@@ -242,6 +252,7 @@ export function MobileSettingsPanel() {
             <div className="flex items-center justify-between">
               <label className="text-sm text-gray-300">Ear Position</label>
               <select
+                aria-label="Ear position"
                 value={config.earPosition}
                 onChange={(e) => setEarPosition(e.target.value as EarPosition)}
                 className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
@@ -275,6 +286,7 @@ export function MobileSettingsPanel() {
               <label className="text-xs text-gray-400">Position:</label>
               <input
                 type="number"
+                aria-label="Split position in millimeters"
                 value={config.splitPosition}
                 onChange={(e) => setSplitPosition(Number(e.target.value))}
                 disabled={config.splitLocked}
@@ -303,7 +315,7 @@ export function MobileSettingsPanel() {
       </section>
 
       {/* Editor Options */}
-      <section>
+      <section hidden={view !== 'settings'}>
         <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Editor Options</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -322,6 +334,7 @@ export function MobileSettingsPanel() {
             <div className="flex items-center justify-between pl-2 border-l-2 border-blue-600">
               <label className="text-sm text-gray-400">Grid Size</label>
               <select
+                aria-label="Grid size"
                 value={gridSize}
                 onChange={(e) => setGridSize(Number(e.target.value))}
                 className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
@@ -382,7 +395,7 @@ export function MobileSettingsPanel() {
       </section>
 
       {/* File Operations */}
-      <section>
+      <section hidden={view !== 'files'}>
         <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">File Operations</h3>
         <div className="space-y-2">
           <input
@@ -409,13 +422,17 @@ export function MobileSettingsPanel() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            Share Link
+            Share rack
           </button>
         </div>
       </section>
 
+      {view === 'files' && shareUrl && <label className="block text-sm text-gray-300">Share link
+        <textarea readOnly value={shareUrl} onFocus={e => e.target.select()} className="w-full mt-2 bg-gray-900 rounded p-3" rows={3} />
+      </label>}
+
       {/* Export Options */}
-      <section>
+      <section hidden={view !== 'files'}>
         <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Export</h3>
         <div className="space-y-2">
           {config.isSplit ? (
@@ -483,9 +500,10 @@ export function MobileSettingsPanel() {
         </div>
       </section>
 
+      {view === 'settings' && <details><summary className="text-gray-300 py-3">Help & printing guide</summary><MobileAidePanel /></details>}
       {/* Modals */}
-      {showAdvanced && <AdvancedSettingsModal onClose={() => setShowAdvanced(false)} />}
-      {showHooksModal && <ToollessHooksModal onClose={() => setShowHooksModal(false)} />}
+      {showAdvanced && createPortal(<AdvancedSettingsModal onClose={() => setShowAdvanced(false)} />, document.body)}
+      {showHooksModal && createPortal(<ToollessHooksModal onClose={() => setShowHooksModal(false)} />, document.body)}
     </div>
   );
 }

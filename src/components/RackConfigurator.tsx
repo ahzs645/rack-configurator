@@ -267,7 +267,11 @@ function TrimNotches({ rackBounds, hookPattern, trimPattern, rackU, earThickness
   return notches.length > 0 ? <g>{notches}</g> : null;
 }
 
-export function RackConfigurator() {
+export function RackConfigurator({ touchControls = false, onAddDevice, onEditDevice }: {
+  touchControls?: boolean; onAddDevice?: () => void; onEditDevice?: () => void;
+}) {
+  const [panMode, setPanMode] = useState(false);
+  const touchPointers = useRef(new Map<number, { x: number; y: number }>());
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgSize, setSvgSize] = useState({ width: 800, height: 600 });
@@ -277,6 +281,8 @@ export function RackConfigurator() {
 
   const {
     config,
+    selectedDeviceId,
+    resetView,
     zoom,
     panX,
     panY,
@@ -371,7 +377,7 @@ export function RackConfigurator() {
   }, [zoom, panX, panY, setZoom, setPan, clampPan]);
 
   // Handle background mouse down for panning
-  const handleBackgroundMouseDown = (e: React.MouseEvent) => {
+  const handleBackgroundMouseDown = (e: React.PointerEvent) => {
     // Only start panning on left click and not on a device
     if (e.button !== 0) return;
     setIsPanning(true);
@@ -397,14 +403,15 @@ export function RackConfigurator() {
   const overlappingDevices = new Set(validateLayout(config).filter(i => i.severity === 'error').flatMap(i => i.deviceIds));
 
   // Handle split line drag (only if not locked)
-  const handleSplitMouseDown = useCallback((e: React.MouseEvent) => {
-    if (config.splitLocked) return;
+  const handleSplitMouseDown = useCallback((e: React.PointerEvent) => {
+    if (config.splitLocked || (touchControls && panMode)) return;
     e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDraggingSplit(true);
-  }, [config.splitLocked]);
+  }, [config.splitLocked, touchControls, panMode]);
 
   const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.PointerEvent) => {
       // Handle split line dragging
       if (isDraggingSplit && svgRef.current) {
         const rect = svgRef.current.getBoundingClientRect();
@@ -447,8 +454,8 @@ export function RackConfigurator() {
         setIsDraggingSplit(false);
         setIsPanning(false);
       };
-      window.addEventListener('mouseup', handleGlobalMouseUp);
-      return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.addEventListener('pointerup', handleGlobalMouseUp);
+      return () => window.removeEventListener('pointerup', handleGlobalMouseUp);
     }
   }, [isDraggingSplit, isPanning]);
 
@@ -510,23 +517,53 @@ export function RackConfigurator() {
         setNodeRef(node);
       }}
       data-droppable-id="rack-drop-zone"
-      className={`flex-1 bg-gray-900 overflow-hidden relative ${isOver ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
+      className={`flex-1 min-h-0 bg-gray-900 overflow-hidden relative ${isOver ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
     >
       <svg
         ref={svgRef}
         width={svgSize.width}
         height={svgSize.height}
-        className={`w-full h-full ${isDraggingSplit ? 'cursor-ew-resize' : isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`absolute inset-0 w-full h-full touch-none ${isDraggingSplit ? 'cursor-ew-resize' : isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
         onClick={handleBackgroundClick}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+        onPointerDown={(e) => {
+          if (touchControls && panMode) {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            touchPointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          } else if (!(e.target as Element).closest('[data-rack-device]')) {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            handleBackgroundMouseDown(e);
+          }
+        }}
+        onPointerMove={(e) => {
+          const pointers = touchPointers.current;
+          if (!pointers.has(e.pointerId)) { handleMouseMove(e); return; }
+          const before = [...pointers.values()];
+          pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          const after = [...pointers.values()];
+          const midpoint = (points: { x: number; y: number }[]) => ({
+            x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+            y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+          });
+          const a = midpoint(before), b = midpoint(after);
+          const current = useRackStore.getState();
+          const distance = (points: { x: number; y: number }[]) => Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+          const factor = before.length === 2 ? distance(after) / Math.max(1, distance(before)) : 1;
+          setZoom(current.zoom * factor);
+          const actualFactor = useRackStore.getState().zoom / current.zoom;
+          const rect = e.currentTarget.getBoundingClientRect();
+          // Preserve the point between the fingers while zooming.
+          setPan(b.x - a.x + current.panX * actualFactor + (a.x - rect.left - rect.width / 2) * (1 - actualFactor),
+            b.y - a.y + current.panY * actualFactor + (a.y - rect.top - rect.height / 2) * (1 - actualFactor));
+        }}
+        onPointerUp={(e) => { touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
+        onPointerCancel={(e) => { touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
+        onLostPointerCapture={(e) => { touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
       >
         {/* Background - handles panning */}
         <rect
           width="100%"
           height="100%"
           fill="#111827"
-          onMouseDown={handleBackgroundMouseDown}
         />
 
         {/* Rack ears (behind the panel) */}
@@ -644,7 +681,7 @@ export function RackConfigurator() {
                 stroke="transparent"
                 strokeWidth={20}
                 className="cursor-ew-resize"
-                onMouseDown={handleSplitMouseDown}
+                onPointerDown={handleSplitMouseDown}
               />
             )}
             {/* Visible split line */}
@@ -667,7 +704,7 @@ export function RackConfigurator() {
               rx={3}
               fill={config.splitLocked ? '#f59e0b' : (isDraggingSplit ? '#a78bfa' : '#8b5cf6')}
               className={config.splitLocked ? 'cursor-default' : 'cursor-ew-resize'}
-              onMouseDown={handleSplitMouseDown}
+              onPointerDown={handleSplitMouseDown}
             />
             {config.splitLocked ? (
               /* Lock icon when locked */
@@ -742,6 +779,7 @@ export function RackConfigurator() {
             device={device}
             view={view}
             isOverlapping={overlappingDevices.has(device.id)}
+            navigationMode={touchControls && panMode}
           />
         ))}
 
@@ -780,6 +818,25 @@ export function RackConfigurator() {
           </text>
         )}
       </svg>
+
+      {touchControls && <>
+        <div role="toolbar" aria-label="2D view controls" className="absolute top-3 left-3 right-3 flex justify-center gap-1 bg-gray-800 border border-gray-600 rounded-lg p-1 text-white text-sm">
+          <button aria-pressed={!panMode} onClick={() => setPanMode(false)} className={`px-3 rounded ${!panMode ? 'bg-blue-600' : ''}`}>Edit</button>
+          <button aria-pressed={panMode} onClick={() => setPanMode(true)} className={`px-3 rounded ${panMode ? 'bg-blue-600' : ''}`}>Pan</button>
+          <button aria-label="Zoom out" onClick={() => setZoom(zoom / 1.3)} className="px-3">−</button>
+          <button aria-label="Zoom in" onClick={() => setZoom(zoom * 1.3)} className="px-3">+</button>
+          <button onClick={resetView} className="px-3 whitespace-nowrap">Fit view</button>
+        </div>
+        <p className="absolute top-20 left-3 right-3 text-center text-xs text-gray-400 pointer-events-none">
+          {panMode ? 'Drag to pan · Pinch to zoom' : 'Tap to select · Drag to move · Use Pan to zoom'}
+        </p>
+        <div className="absolute bottom-16 left-4 right-4 text-center">
+          {allDevices.length === 0 ? <div className="space-y-2">
+            <p className="text-sm text-gray-300">Start your rack by adding a device.</p>
+            <button onClick={onAddDevice} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Add devices</button>
+          </div> : selectedDeviceId ? <button onClick={onEditDevice} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Edit selected device</button> : null}
+        </div>
+      </>}
 
       {/* Zoom indicator */}
       <div className="absolute bottom-4 right-4 bg-gray-800 text-gray-300 px-3 py-1 rounded text-sm">

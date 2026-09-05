@@ -5,7 +5,7 @@ import { DeviceLibrary } from './components/DeviceLibrary';
 import { RackConfigurator } from './components/RackConfigurator';
 import { RackToolbar } from './components/RackToolbar';
 import { PropertyPanel } from './components/PropertyPanel';
-import { MainViewer3D } from './components/MainViewer3D';
+import { RackPreview3D } from './components/RackPreview3D';
 import { MobileLayout } from './components/MobileLayout';
 import { useRackStore } from './state/rack-store';
 import { useIsMobile } from './hooks/useMediaQuery';
@@ -14,6 +14,7 @@ import { getDevice } from './data/devices';
 import { getPlacedDeviceDimensions, parseConfigJson } from './utils/scad-generator';
 import { clampToRackBounds, calculateFitScale } from './utils/coordinates';
 import { loadConfigFromUrl, clearUrlConfig } from './utils/url-sharing';
+import { readWorkingRack, saveWorkingRack } from './utils/working-rack';
 import type { RackConfig } from './state/types';
 
 type MainViewMode = '2d' | '3d';
@@ -298,7 +299,7 @@ function DesktopLayout() {
       onDragCancel={handleDragCancel}
     >
       <div
-        className="h-screen flex flex-col bg-gray-900 overflow-hidden relative"
+        className="app-shell flex flex-col bg-gray-900 overflow-hidden relative"
         onDragEnter={handleFileDragEnter}
         onDragLeave={handleFileDragLeave}
         onDragOver={handleFileDragOver}
@@ -359,7 +360,7 @@ function DesktopLayout() {
             {mainViewMode === '2d' ? (
               <RackConfigurator />
             ) : (
-              <MainViewer3D />
+              <RackPreview3D />
             )}
           </div>
 
@@ -393,15 +394,48 @@ function App() {
   const isMobile = useIsMobile();
   const { loadConfig } = useRackStore();
 
-  // Load config from URL on mount
+  const [startup, setStartup] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [attempt, setAttempt] = useState(0);
+
   useEffect(() => {
+    let cancelled = false;
     loadConfigFromUrl().then((urlConfig) => {
-      if (urlConfig) {
-        loadConfig(urlConfig);
-        clearUrlConfig();
-      }
+      if (cancelled) return;
+      const initial = urlConfig ?? readWorkingRack();
+      if (initial) loadConfig(initial);
+      // Only remove a share link once a refresh can restore its contents.
+      if (urlConfig && saveWorkingRack(useRackStore.getState().config)) clearUrlConfig();
+      setStartup('ready');
+    }).catch(() => {
+      if (!cancelled) setStartup('error');
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { cancelled = true; };
+  }, [loadConfig, attempt]);
+
+  useEffect(() => {
+    if (startup !== 'ready') return;
+    return useRackStore.subscribe((state, previous) => {
+      if (state.config !== previous.config) saveWorkingRack(state.config);
+    });
+  }, [startup]);
+
+  if (startup !== 'ready') {
+    return <div className="app-shell bg-gray-900 text-white flex items-center justify-center p-6">
+      <div className="max-w-sm space-y-4" role={startup === 'error' ? 'alert' : 'status'}>
+        <h1 className="text-xl font-semibold">{startup === 'error' ? 'Couldn’t open this rack' : 'Opening your rack…'}</h1>
+        {startup === 'error' && <>
+          <p className="text-gray-300">The link may be incomplete, or the saved file couldn’t be reached. Your working rack hasn’t been replaced.</p>
+          <button className="bg-blue-600 rounded-lg px-4 py-3" onClick={() => { setStartup('loading'); setAttempt(a => a + 1); }}>Try again</button>
+          <button className="block underline py-3" onClick={() => {
+            const saved = readWorkingRack();
+            if (saved) loadConfig(saved);
+            clearUrlConfig();
+            setStartup('ready');
+          }}>Open my working rack</button>
+        </>}
+      </div>
+    </div>;
+  }
 
   if (isMobile) {
     return <MobileLayout />;

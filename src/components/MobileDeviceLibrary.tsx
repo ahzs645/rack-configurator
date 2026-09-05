@@ -206,7 +206,7 @@ export function MobileDeviceLibrary() {
     : null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       {/* Search */}
       <div className="p-4 border-b border-gray-700">
         <div className="relative">
@@ -215,6 +215,7 @@ export function MobileDeviceLibrary() {
           </svg>
           <input
             type="text"
+            aria-label="Search devices"
             placeholder="Search devices..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -222,7 +223,7 @@ export function MobileDeviceLibrary() {
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              aria-label="Clear search" onClick={() => setSearchQuery('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,7 +236,7 @@ export function MobileDeviceLibrary() {
       </div>
 
       {/* Device list */}
-      <div className="flex-1 overflow-y-auto overscroll-contain">
+      <div className="flex-1">
         <CustomDeviceForm
           isExpanded={showCustomForm}
           onToggle={() => setShowCustomForm(!showCustomForm)}
