@@ -86,7 +86,7 @@ export function MobileAidePanel() {
           <ul className="list-disc list-inside space-y-1">
             <li>Drag devices to reposition them on the rack panel</li>
             <li>Select a device by tapping it</li>
-            <li>Shallow racks open enlarged: swipe horizontally in Pan mode, or use the position slider. Fit view shows the whole rack; Detail view enlarges it again.</li>
+            <li>Shallow racks open enlarged: swipe horizontally in Pan mode and pinch directly on the rack to zoom in or out. Fit view shows the whole rack; Detail view enlarges it again.</li>
             <li>Grid snapping helps with precise alignment</li>
           </ul>
           <p className="mt-3"><strong className="text-white">3D Preview</strong></p>

@@ -218,8 +218,10 @@ export function MainViewer3D() {
           <button aria-pressed={dragMode === 'pan'} onClick={() => setDragMode('pan')} title="Drag to move the view"
             className={`px-3 py-2 rounded ${dragMode === 'pan' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}>Pan</button>
           <span className="border-l border-gray-600 mx-1" />
-          <button aria-label="Zoom in" title="Zoom in" onClick={() => zoomView(0.8)} className="px-3 py-2 rounded hover:bg-gray-700">+</button>
-          <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomView(1.25)} className="px-3 py-2 rounded hover:bg-gray-700">−</button>
+          {!isMobile && <>
+            <button aria-label="Zoom in" title="Zoom in" onClick={() => zoomView(0.8)} className="px-3 py-2 rounded hover:bg-gray-700">+</button>
+            <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomView(1.25)} className="px-3 py-2 rounded hover:bg-gray-700">−</button>
+          </>}
           <button onClick={fitView} title="Recenter and fit the entire rack" className="px-3 py-2 rounded hover:bg-gray-700">Fit view</button>
         </div>
         <p className="text-xs text-gray-300 bg-gray-900/80 rounded px-2 py-1">{isMobile ? 'One finger to ' + dragMode + ' · Two fingers to pan / pinch to zoom' : (dragMode === 'rotate' ? 'Drag to rotate' : 'Drag to pan') + ' · Shift/right-drag to pan · Scroll to zoom toward cursor'}</p>

@@ -341,17 +341,6 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
     setPan(mobileView.panX, mobileView.panY);
   }, [touchControls, mobileView, svgSize.width, svgSize.height, config.rackU, config.panelWidth, setZoom, setPan]);
 
-  const changeZoom = (nextZoom: number) => {
-    automaticMobileView.current = false;
-    setZoom(nextZoom);
-    if (touchControls) {
-      const next = useRackStore.getState();
-      const limits = getMobilePanLimits(svgSize.width, svgSize.height, config.rackU, config.panelWidth, next.zoom);
-      setPan(Math.max(-limits.maxPanX, Math.min(limits.maxPanX, next.panX)),
-        Math.max(-limits.maxPanY, Math.min(limits.maxPanY, next.panY)));
-    }
-  };
-
   // View configuration for coordinate transforms
   const view: ViewConfig = useMemo(() => ({
     svgWidth: svgSize.width,
@@ -863,8 +852,6 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
         <div role="toolbar" aria-label="2D view controls" className="absolute top-3 left-3 right-3 flex justify-center gap-1 bg-gray-800 border border-gray-600 rounded-lg p-1 text-white text-sm">
           <button aria-pressed={!panMode} onClick={() => setPanMode(false)} className={`px-3 rounded ${!panMode ? 'bg-blue-600' : ''}`}>Edit</button>
           <button aria-pressed={panMode} onClick={() => setPanMode(true)} className={`px-3 rounded ${panMode ? 'bg-blue-600' : ''}`}>Pan</button>
-          <button aria-label="Zoom out" onClick={() => changeZoom(zoom / 1.3)} className="px-3">−</button>
-          <button aria-label="Zoom in" onClick={() => changeZoom(zoom * 1.3)} className="px-3">+</button>
           <button onClick={() => {
             automaticMobileView.current = false;
             if (zoom <= 1.05 && mobileView.zoom > 1.15) {
@@ -873,16 +860,8 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
           }} className="px-3 whitespace-nowrap">{zoom <= 1.05 && mobileView.zoom > 1.15 ? 'Detail view' : 'Fit view'}</button>
         </div>
         <p className="absolute top-20 left-3 right-3 text-center text-xs text-gray-400 pointer-events-none">
-          {panMode ? (getPanLimits().maxPanX > 0 ? 'Swipe left or right · Pinch to zoom · Edit to move devices' : 'Pinch to zoom · Edit to move devices') : 'Tap to select · Drag to move · Use Pan to scroll'}
+          {panMode ? (getPanLimits().maxPanX > 0 ? 'Swipe to move · Pinch to zoom in or out' : 'Pinch to zoom in or out') : 'Tap to select · Drag to move · Use Pan to scroll'}
         </p>
-        {getPanLimits().maxPanX > 0 && <div className="absolute bottom-16 left-4 right-4 flex items-center gap-3 text-xs text-gray-400">
-          <span>Left</span>
-          <input type="range" aria-label="Horizontal rack position" min={-getPanLimits().maxPanX} max={getPanLimits().maxPanX} step="any"
-            value={Math.max(-getPanLimits().maxPanX, Math.min(getPanLimits().maxPanX, -panX))}
-            onChange={e => { automaticMobileView.current = false; setPan(-Number(e.target.value), panY); }}
-            className="flex-1 min-w-0 h-11 accent-blue-500" />
-          <span>Right</span>
-        </div>}
         <div className="absolute bottom-4 left-4 right-24 text-center">
           {allDevices.length === 0 ? <div className="space-y-2">
             <button onClick={onAddDevice} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Add devices</button>
