@@ -52,7 +52,8 @@
       "offsetY": 17.5,
       "mountType": "compact",
       "orientation": "normal",
-      "sharedMountGroup": "shared-74300banxx6snj68u3tae-7qnzrbi46k2b768b8bj6yf"
+      "sharedMountGroup": "shared-74300banxx6snj68u3tae-7qnzrbi46k2b768b8bj6yf",
+      "backStyle": "none"
     }
   ],
   "rightDevices": [

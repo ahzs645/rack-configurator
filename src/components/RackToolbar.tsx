@@ -311,11 +311,13 @@ export function RackToolbar() {
   };
 
   return (
-    <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center gap-4 flex-wrap relative">
+    <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 space-y-3 relative" aria-label="Rack toolbar">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2" role="group" aria-label="Rack settings">
       {/* Rack Size */}
       <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-300">Size:</label>
+        <label htmlFor="rack-size" className="text-sm text-gray-300">Rack</label>
         <select
+          id="rack-size"
           value={config.rackU}
           onChange={(e) => setRackU(Number(e.target.value) as 1 | 2 | 3 | 4 | 5 | 6)}
           className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
@@ -329,13 +331,12 @@ export function RackToolbar() {
         </select>
       </div>
 
-      {/* Divider */}
-      <div className="w-px h-6 bg-gray-600" />
-
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Rack ears">
       {/* Ear Style */}
       <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-300">Ears:</label>
+        <label htmlFor="rack-ears" className="text-sm text-gray-300">Ears</label>
         <select
+          id="rack-ears"
           value={config.earStyle}
           onChange={(e) => setEarStyle(e.target.value as EarStyle)}
           className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
@@ -362,8 +363,9 @@ export function RackToolbar() {
         </button>
       ) : config.earStyle !== 'none' ? (
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-300">Position:</label>
+          <label htmlFor="ear-position" className="text-sm text-gray-300">Position</label>
           <select
+            id="ear-position"
             value={config.earPosition}
             onChange={(e) => setEarPosition(e.target.value as EarPosition)}
             className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
@@ -375,11 +377,11 @@ export function RackToolbar() {
         </div>
       ) : null}
 
-      {/* Divider */}
-      <div className="w-px h-6 bg-gray-600" />
-
+      </div>
+      <div className="flex items-center gap-2" role="group" aria-label="Panel split">
       {/* Split Panel Toggle */}
       <button
+        aria-pressed={config.isSplit}
         onClick={() => setIsSplit(!config.isSplit)}
         className={`flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors ${
           config.isSplit
@@ -396,9 +398,11 @@ export function RackToolbar() {
 
       {config.isSplit && (
         <div className="flex items-center gap-1">
-          <label className="text-xs text-gray-400">at:</label>
+          <label htmlFor="split-position" className="text-xs text-gray-400">at</label>
           <input
             type="number"
+            id="split-position"
+            aria-label="Split position (mm)"
             value={config.splitPosition}
             onChange={(e) => setSplitPosition(Number(e.target.value))}
             placeholder="auto"
@@ -431,9 +435,8 @@ export function RackToolbar() {
         </div>
       )}
 
-      {/* Divider */}
-      <div className="w-px h-6 bg-gray-600" />
-
+      </div>
+      <div className="ml-auto">
       {/* Advanced Settings */}
       <button
         onClick={() => setShowAdvanced(true)}
@@ -447,11 +450,14 @@ export function RackToolbar() {
         Advanced
       </button>
 
-      {/* Divider */}
-      <div className="w-px h-6 bg-gray-600" />
-
+      </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-700 pt-2">
+      <div className="flex items-center gap-2" role="group" aria-label="2D view controls">
+      <span className="text-xs text-gray-400 mr-1">2D view</span>
       {/* Show Grid */}
       <button
+        aria-pressed={showGrid}
         onClick={toggleShowGrid}
         className={`p-1.5 rounded transition-colors ${
           showGrid
@@ -488,6 +494,7 @@ export function RackToolbar() {
 
       {/* Snap to Grid */}
       <button
+        aria-pressed={snapToGrid}
         onClick={toggleSnapToGrid}
         className={`p-1.5 rounded transition-colors ${
           snapToGrid
@@ -501,9 +508,6 @@ export function RackToolbar() {
         </svg>
       </button>
 
-      {/* Spacer */}
-      <div className="flex-1" />
-
       {/* View controls */}
       <button
         onClick={resetView}
@@ -515,6 +519,8 @@ export function RackToolbar() {
         </svg>
       </button>
 
+      </div>
+      <div className="flex items-center gap-2" role="group" aria-label="Rack file actions">
       {/* Clear devices */}
       <button
         onClick={clearDevices}
@@ -674,6 +680,9 @@ export function RackToolbar() {
             </button>
           </div>
         )}
+      </div>
+
+      </div>
       </div>
 
       {/* Close export menu when clicking outside */}

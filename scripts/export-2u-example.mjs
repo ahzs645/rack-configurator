@@ -25,6 +25,11 @@ try {
     ? { config: { ...api.DEFAULT_RACK_CONFIG, ...original }, changes: ['Exported supplied configuration without rearranging devices.'] }
     : api.fitTo2U({ ...api.DEFAULT_RACK_CONFIG, ...original }, { allowRotation: true, allowCompact: true, allowShared: true });
   assert.ok(result.config, result.message);
+  if (!input) {
+    // The saved example uses a holder open at both ends for the Comet.
+    const comet = result.config.leftDevices.find(d => d.deviceId === 'glinet_comet_x');
+    if (comet) comet.backStyle = 'none';
+  }
   assert.equal(result.config.rackU, 2, 'This validation script expects a 2U rack.');
   assert.deepEqual(api.validateLayout(result.config), []);
   await mkdir('public/examples', { recursive: true });
@@ -87,7 +92,10 @@ try {
     const dims = api.getPlacedDeviceDimensions(device);
     const x = result.config.panelWidth/2 + device.offsetX - dims.width/2;
     const z = 88.9/2 + device.offsetY - dims.height/2;
-    const intersection = `use <components/rack_generator.scad>\nintersection() {\n${assembly.replace(/^(?:use|include)\s+<[^>]+>\s*$/gm, '')}\ntranslate([${x}, -1, ${z}]) cube([${dims.width}, ${dims.depth + result.config.plateThickness + 1}, ${dims.height}]);\n}`;
+    // Open-back holders must clear the exit as well as the insertion volume.
+    const openBack = (device.backStyle || result.config.backStyle) === 'none';
+    const cavityDepth = dims.depth + result.config.plateThickness + (openBack ? 30 : 1);
+    const intersection = `use <components/rack_generator.scad>\nintersection() {\n${assembly.replace(/^(?:use|include)\s+<[^>]+>\s*$/gm, '')}\ntranslate([${x}, -1, ${z}]) cube([${dims.width}, ${cavityDepth}, ${dims.height}]);\n}`;
     reports.push(await render(intersection, `cavity-${device.deviceId}`, false, true));
   }
   await writeFile(`${output}/validation.json`, JSON.stringify({ changes: result.changes, reports }, null, 2));

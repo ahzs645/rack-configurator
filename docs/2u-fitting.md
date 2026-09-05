@@ -17,6 +17,8 @@ The panel is 440.5 × 88.9 mm, split 20 mm right of center. Standard wall settin
 
 The left support stack is 84 mm tall, leaving 2.45 mm at each panel edge. The right envelopes are 74 and 82 mm tall. The seam reserve reflects the M3 joiner wall plus a 2 mm assembly buffer. Device dimensions are the application's catalog measurements; verify the assembled hardware including protrusions.
 
+All four holders in the saved arrangement have no rear plate (`backStyle: "none"` on each device), including the Comet X. The Comet remains in its compact shared support, but its device opening now continues through the rear. Geometry validation checks the exit as well as the insertion space.
+
 ## Manual editing
 
 Select a device and use **Orientation → On its side (90°)**. Generic cages and cutouts support rotation; specialty mounts with fixed holes or port features require a separate design. Width and height swap while depth remains unchanged. The opening and generic cage are regenerated for this orientation.
