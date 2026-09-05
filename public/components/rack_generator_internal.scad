@@ -334,7 +334,7 @@ module _rg_device_mount(
 
     if (mount_type == "compact") {
         compact_cage(offset_x, offset_y, dev_w, dev_h, dev_d,
-                     clearance, 4 + heavy, plate_thick, effective_back_style);
+                     clearance, 4 + heavy, plate_thick, effective_back_style, hex_dia, hex_wall);
     }
     else if (mount_type == "cage") {
         cage_structure(

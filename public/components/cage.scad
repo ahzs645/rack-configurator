@@ -32,10 +32,10 @@ DEFAULT_HEX_BORDER = 5;   // Solid border around edges
  */
 // Compact sleeve: exact outside envelope is device + clearance + 2*wall.
 // Adjacent sleeves may overlap by one wall thickness to form a shared divider.
-// Front rail bonds into the faceplate; rear is selectable and slots leave solid
+// Front rail bonds into the faceplate; rear is selectable and vents leave solid
 // front/rear rails plus corner posts for support. No oversized reinforcing block.
 module compact_cage(offset_x, offset_y, w, h, d, clearance=1, wall=4,
-                    plate_thick=4, back_style="vent") {
+                    plate_thick=4, back_style="vent", hex_dia=8, hex_wall=2) {
     iw = w + clearance;
     ih = h + clearance;
     ow = iw + 2*wall;
@@ -48,22 +48,31 @@ module compact_cage(offset_x, offset_y, w, h, d, clearance=1, wall=4,
             cube([ow, oh, rear + wall - front]);
         translate([-iw/2, -ih/2, front - 1])
             cube([iw, ih, rear - front + (back_style == "none" ? wall + 2 : 1)]);
-        // Side ventilation; 8 mm front/rear rails and 4 mm corner rails.
+        // Honeycomb through-holes match the standard cages, retaining the
+        // compact envelope, 8 mm front/rear rails and 4 mm corner rails.
         if (d > 24 && ih > 16)
             for (side = [-1, 1])
-                translate([side*ow/2 - wall - 1, -ih/2 + 4, plate_thick + 8])
-                    cube([2*wall + 2, ih - 8, d - 16]);
-        // Top/bottom ventilation. 10 mm ribs alternate with 10 mm slots.
+                translate([side*(iw + wall)/2, 0, plate_thick + d/2])
+                    rotate([90, 0, 90])
+                        compact_vent(ih - 8, d - 16, wall + 2, hex_dia, hex_wall);
         if (d > 24 && iw > 24)
-            for (x = [-iw/2 + 6 : 20 : iw/2 - 16])
-                for (side = [-1, 1])
-                    translate([x, side*oh/2 - wall - 1, plate_thick + 8])
-                        cube([10, 2*wall + 2, d - 16]);
+            for (side = [-1, 1])
+                translate([0, side*(ih + wall)/2, plate_thick + d/2])
+                    rotate([90, 0, 0])
+                        compact_vent(iw - 8, d - 16, wall + 2, hex_dia, hex_wall);
         if (back_style == "vent" && ih > 16 && iw > 24)
-            for (x = [-iw/2 + 6 : 20 : iw/2 - 16])
-                translate([x, -ih/2 + 4, rear - 0.01])
-                    cube([10, ih - 8, wall + 1]);
+            translate([0, 0, rear + wall/2])
+                compact_vent(iw - 8, ih - 8, wall + 2, hex_dia, hex_wall);
     }
+}
+
+// Align the X grid between different-width sleeves sharing a divider.
+// The depth cutouts all begin 8 mm behind the faceplate, so their Y grid
+// also aligns even when the two devices have different depths.
+module compact_vent(width, depth, thickness, hex_dia, hex_wall) {
+    x_step = hex_dia * 3/2 + hex_wall * cos(30) * 2;
+    honeycomb_cutout(width, depth, thickness, hex_dia, hex_wall,
+                     [(-width/2) % x_step, 0]);
 }
 
 module reinforcing_block(offset_x, offset_y, total_width, total_height, heavy_device=0)

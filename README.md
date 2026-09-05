@@ -6,6 +6,8 @@ See [the 2U fitting guide](docs/2u-fitting.md) for the four-device example, cont
 
 Run `npm run dev` to start the editor. Run `npm test`, `npm run lint`, and `npm run build` to check it. `npm run test:geometry` produces and verifies printable exports.
 
+See the [agent integration plan](docs/agent-integration.md) for the WebMCP command contract, skill and bounded loop roadmap. The current [agent operating guide](public/agents.txt) is served alongside `llms.txt`; native agent tools are not yet implemented.
+
 ---
 
 # React + TypeScript + Vite

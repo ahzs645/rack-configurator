@@ -9,7 +9,8 @@ import OpenSCAD from '../public/openscad.js';
 const require = createRequire(import.meta.url);
 await mkdir('.test-build', { recursive: true });
 const temp = await mkdtemp('.test-build/export-');
-const output = 'artifacts/rack-2u';
+const input = process.argv[2];
+const output = process.argv[3] || 'artifacts/rack-2u';
 await mkdir(output, { recursive: true });
 try {
   await build({ stdin: { contents: `
@@ -19,12 +20,15 @@ try {
     export { generateBundledScadCode } from './src/utils/scad-bundler';
   `, resolveDir: process.cwd() }, bundle: true, platform: 'node', format: 'cjs', packages: 'external', outfile: `${temp}/api.cjs`, define: { 'import.meta.env.BASE_URL': '"/"' } });
   const api = require(resolve(`${temp}/api.cjs`));
-  const original = JSON.parse(await readFile('tests/fixtures/four-devices.json', 'utf8'));
-  const result = api.fitTo2U({ ...api.DEFAULT_RACK_CONFIG, ...original }, { allowRotation: true, allowCompact: true, allowShared: true });
+  const original = JSON.parse(await readFile(input || 'tests/fixtures/four-devices.json', 'utf8'));
+  const result = input
+    ? { config: { ...api.DEFAULT_RACK_CONFIG, ...original }, changes: ['Exported supplied configuration without rearranging devices.'] }
+    : api.fitTo2U({ ...api.DEFAULT_RACK_CONFIG, ...original }, { allowRotation: true, allowCompact: true, allowShared: true });
   assert.ok(result.config, result.message);
+  assert.equal(result.config.rackU, 2, 'This validation script expects a 2U rack.');
   assert.deepEqual(api.validateLayout(result.config), []);
   await mkdir('public/examples', { recursive: true });
-  await writeFile('public/examples/four-devices-2u.json', JSON.stringify(result.config, null, 2) + '\n');
+  if (!input) await writeFile('public/examples/four-devices-2u.json', JSON.stringify(result.config, null, 2) + '\n');
   await writeFile(`${output}/rack-2u.json`, JSON.stringify(result.config, null, 2) + '\n');
   const zip = await JSZip.loadAsync(await readFile('public/rack-scad.zip'));
   const files = [];

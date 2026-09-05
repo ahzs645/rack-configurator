@@ -23,7 +23,9 @@ Select a device and use **Orientation → On its side (90°)**. Generic cages an
 
 To share a divider, use **Stack above with a shared divider** and select another device on the same side. Both become compact cages and align exactly. Shared assemblies move together when dragged or when X/Y is edited. **Detach from shared support** permits independent placement. A disconnected or overlapping assembly receives fit feedback.
 
-The compact cage uses 4 mm walls at the standard setting, 5/6 mm at heavier settings. It has front/rear rails, side windows, top/bottom ventilation slots and selectable rear closure. It avoids the standard cage's 8 mm reinforcing border. Adjacent sleeves overlap by exactly one wall thickness, producing a single divider in the exported union. This is not simply hidden collision feedback.
+The compact cage uses 4 mm walls at the standard setting, 5/6 mm at heavier settings. Its side, top/bottom and ventilated rear walls use honeycomb through-holes like the standard cages, with the same hex diameter and web thickness settings. It retains front/rear rails and selectable rear closure. The honeycomb grid aligns between different-width sleeves sharing a divider. It avoids the standard cage's 8 mm reinforcing border. Adjacent sleeves overlap by exactly one wall thickness, producing a single divider in the exported union.
+
+Honeycomb replaces the compact holder's long rectangular openings, reducing long bridges. It does not certify a support-free print: inspect the chosen orientation, hooks, rear closures and bridging in your slicer.
 
 ## Fit checking and scope
 
@@ -40,3 +42,5 @@ Geometry checks do not establish load capacity, cooling, cable access, insertion
 - `npm run test:geometry`: rebuild the shipped SCAD library, generate the saved example, and render the two halves plus a standalone bundled SCAD model with the shipped OpenSCAD WASM engine. It checks connected meshes, 2U height, warnings and all four insertion volumes. Outputs and a validation report go to `artifacts/rack-2u/`.
 
 `npm run dev` and `npm run build` rebuild `public/rack-scad.zip` from the source modules, preventing stale geometry in the browser. JSON and share links preserve orientations and shared group membership. SCAD exports carry resolved dimensions directly, avoiding drift between the web and OpenSCAD device catalogs.
+
+To export an existing 2U configuration without refitting or changing its joiner settings, run `node scripts/build-scad-library.mjs` followed by `node scripts/export-2u-example.mjs /path/to/rack_config.json artifacts/custom-rack`. The default example is not overwritten when an input file is supplied.

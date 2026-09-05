@@ -1,0 +1,9 @@
+# Rack Configurator
+
+> Configure and export printable rack holders. Dimensions are millimetres.
+
+## Agent workflow
+- [Current operating guide](agents.txt): UI controls, constraints and verification workflow.
+- [Four-device 2U example](examples/four-devices-2u.json): Shared compact honeycomb holders and a rotated Pi.
+
+WebMCP registration and an autonomous loop are planned, not currently available.
