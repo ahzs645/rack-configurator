@@ -230,7 +230,7 @@ export function DeviceOnRack({ device, view, isOverlapping = false, navigationMo
           selectDevice(device.id);
           onInspect?.();
         }
-      } : listeners?.onKeyDown}
+      } : (e) => { listeners?.onKeyDown?.(e); }}
       onClick={handleClick}
       onContextMenu={handleRightClick}
       className="device-on-rack"
