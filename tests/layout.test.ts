@@ -241,3 +241,39 @@ test('mobile split export prepares a downloadable ZIP containing both unchanged 
   assert.deepEqual(await zip.file(generateFilename(source, 'stl', 'left'))!.async('arraybuffer'), left);
   assert.deepEqual(await zip.file(generateFilename(source, 'stl', 'right'))!.async('arraybuffer'), right);
 });
+
+test('shallow mobile racks open enlarged from the left and both edges remain reachable', async () => {
+  const { getMobileRackView, getMobilePanLimits } = await import('../src/utils/mobile-rack-view');
+  const { getRackBoundsSvg } = await import('../src/utils/coordinates');
+  for (const width of [320, 393, 430]) {
+    const height = 550;
+    const initial = getMobileRackView(width, height, 2, 440.5);
+    const limits = getMobilePanLimits(width, height, 2, 440.5, initial.zoom);
+    const view = { svgWidth: width, svgHeight: height, rackU: 2, panelWidth: 440.5, padding: 40, ...initial };
+    const left = getRackBoundsSvg(view);
+    const right = getRackBoundsSvg({ ...view, panX: -limits.maxPanX });
+    assert.ok(initial.zoom > 2);
+    assert.ok(left.height >= 170 && left.height <= 250);
+    assert.ok(left.width > width);
+    assert.ok(Math.abs(left.x - 40) < 1e-8);
+    assert.ok(Math.abs(right.x + right.width - (width - 40)) < 1e-8);
+    assert.equal(limits.maxPanY, 0, 'horizontal swipes cannot lose the shallow rack vertically');
+  }
+});
+
+test('taller racks retain an overview and narrow/short viewports have finite bounded zoom', async () => {
+  const { getMobileRackView, getMobilePanLimits } = await import('../src/utils/mobile-rack-view');
+  for (const rackU of [5, 6]) {
+    const view = getMobileRackView(393, 550, rackU, 440.5);
+    assert.equal(view.zoom, 1);
+    assert.equal(view.panX, 0);
+    assert.equal(getMobilePanLimits(393, 550, rackU, 440.5, view.zoom).maxPanX, 0);
+  }
+  const zooms = [2, 3, 4, 5, 6].map(u => getMobileRackView(393, 550, u, 440.5).zoom);
+  assert.deepEqual(zooms, [...zooms].sort((a, b) => b - a));
+  for (const [width, height] of [[320, 250], [800, 180], [0, 0]]) {
+    const view = getMobileRackView(width, height, 2, 440.5);
+    assert.ok(Number.isFinite(view.zoom) && view.zoom >= 0.25 && view.zoom <= 4);
+    assert.ok(Number.isFinite(view.panX));
+  }
+});

@@ -9,6 +9,7 @@ import {
   getRackDimensions,
   rackSizeToSvg,
 } from '../utils/coordinates';
+import { getMobileRackView, getMobilePanLimits } from '../utils/mobile-rack-view';
 import { validateLayout, getSplitMargin } from '../utils/layout-fit';
 import { DeviceOnRack } from './DeviceOnRack';
 import { RACK_CONSTANTS, TOOLLESS_HOOK_SPACING, getToollessHookCount, type EarStyle, type EarPosition } from '../state/types';
@@ -270,7 +271,10 @@ function TrimNotches({ rackBounds, hookPattern, trimPattern, rackU, earThickness
 export function RackConfigurator({ touchControls = false, onAddDevice, onEditDevice }: {
   touchControls?: boolean; onAddDevice?: () => void; onEditDevice?: () => void;
 }) {
-  const [panMode, setPanMode] = useState(false);
+  const [panMode, setPanMode] = useState(touchControls);
+  const automaticMobileView = useRef(true);
+  const measured = useRef(false);
+  const previousRackShape = useRef('');
   const touchPointers = useRef(new Map<number, { x: number; y: number }>());
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -307,6 +311,7 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
+        measured.current = true;
         setSvgSize({
           width: entry.contentRect.width,
           height: entry.contentRect.height,
@@ -317,6 +322,35 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
   }, []);
+
+  const mobileView = useMemo(() => getMobileRackView(svgSize.width, svgSize.height, config.rackU, config.panelWidth),
+    [svgSize.width, svgSize.height, config.rackU, config.panelWidth]);
+
+  useEffect(() => {
+    if (!touchControls || !measured.current) return;
+    const shape = `${config.rackU}:${config.panelWidth}`;
+    if (previousRackShape.current !== shape) automaticMobileView.current = true;
+    previousRackShape.current = shape;
+    if (!automaticMobileView.current) {
+      const current = useRackStore.getState();
+      const limits = getMobilePanLimits(svgSize.width, svgSize.height, config.rackU, config.panelWidth, current.zoom);
+      setPan(Math.max(-limits.maxPanX, Math.min(limits.maxPanX, current.panX)), Math.max(-limits.maxPanY, Math.min(limits.maxPanY, current.panY)));
+      return;
+    }
+    setZoom(mobileView.zoom);
+    setPan(mobileView.panX, mobileView.panY);
+  }, [touchControls, mobileView, svgSize.width, svgSize.height, config.rackU, config.panelWidth, setZoom, setPan]);
+
+  const changeZoom = (nextZoom: number) => {
+    automaticMobileView.current = false;
+    setZoom(nextZoom);
+    if (touchControls) {
+      const next = useRackStore.getState();
+      const limits = getMobilePanLimits(svgSize.width, svgSize.height, config.rackU, config.panelWidth, next.zoom);
+      setPan(Math.max(-limits.maxPanX, Math.min(limits.maxPanX, next.panX)),
+        Math.max(-limits.maxPanY, Math.min(limits.maxPanY, next.panY)));
+    }
+  };
 
   // View configuration for coordinate transforms
   const view: ViewConfig = useMemo(() => ({
@@ -336,6 +370,7 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
 
   // Calculate pan limits based on rack size, viewport, and zoom level
   const getPanLimits = useCallback(() => {
+    if (touchControls) return getMobilePanLimits(svgSize.width, svgSize.height, config.rackU, config.panelWidth, zoom);
     // At higher zoom levels, allow panning further to see the whole rack
     // Scale pan limits with zoom so user can reach all parts of the zoomed view
     const baseLimit = 0.4;
@@ -343,7 +378,7 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
     const maxPanX = svgSize.width * baseLimit * zoomFactor;
     const maxPanY = svgSize.height * baseLimit * zoomFactor;
     return { maxPanX, maxPanY };
-  }, [svgSize.width, svgSize.height, zoom]);
+  }, [svgSize.width, svgSize.height, zoom, touchControls, config.rackU, config.panelWidth]);
 
   // Clamp pan values to limits
   const clampPan = useCallback((x: number, y: number) => {
@@ -360,6 +395,7 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
     if (!container) return;
 
     const handleWheel = (e: WheelEvent) => {
+      automaticMobileView.current = false;
       e.preventDefault(); // Always prevent default to stop page zoom
 
       if (e.ctrlKey || e.metaKey) {
@@ -380,6 +416,7 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
   const handleBackgroundMouseDown = (e: React.PointerEvent) => {
     // Only start panning on left click and not on a device
     if (e.button !== 0) return;
+    automaticMobileView.current = false;
     setIsPanning(true);
     setPanStart({ x: e.clientX, y: e.clientY, panX, panY });
   };
@@ -526,6 +563,7 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
         className={`absolute inset-0 w-full h-full touch-none ${isDraggingSplit ? 'cursor-ew-resize' : isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
         onClick={handleBackgroundClick}
         onPointerDown={(e) => {
+          automaticMobileView.current = false;
           if (touchControls && panMode) {
             e.currentTarget.setPointerCapture(e.pointerId);
             touchPointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -552,8 +590,10 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
           const actualFactor = useRackStore.getState().zoom / current.zoom;
           const rect = e.currentTarget.getBoundingClientRect();
           // Preserve the point between the fingers while zooming.
-          setPan(b.x - a.x + current.panX * actualFactor + (a.x - rect.left - rect.width / 2) * (1 - actualFactor),
-            b.y - a.y + current.panY * actualFactor + (a.y - rect.top - rect.height / 2) * (1 - actualFactor));
+          const limits = getMobilePanLimits(svgSize.width, svgSize.height, config.rackU, config.panelWidth, useRackStore.getState().zoom);
+          const nextX = b.x - a.x + current.panX * actualFactor + (a.x - rect.left - rect.width / 2) * (1 - actualFactor);
+          const nextY = b.y - a.y + current.panY * actualFactor + (a.y - rect.top - rect.height / 2) * (1 - actualFactor);
+          setPan(Math.max(-limits.maxPanX, Math.min(limits.maxPanX, nextX)), Math.max(-limits.maxPanY, Math.min(limits.maxPanY, nextY)));
         }}
         onPointerUp={(e) => { touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
         onPointerCancel={(e) => { touchPointers.current.delete(e.pointerId); handleMouseUp(); }}
@@ -823,16 +863,28 @@ export function RackConfigurator({ touchControls = false, onAddDevice, onEditDev
         <div role="toolbar" aria-label="2D view controls" className="absolute top-3 left-3 right-3 flex justify-center gap-1 bg-gray-800 border border-gray-600 rounded-lg p-1 text-white text-sm">
           <button aria-pressed={!panMode} onClick={() => setPanMode(false)} className={`px-3 rounded ${!panMode ? 'bg-blue-600' : ''}`}>Edit</button>
           <button aria-pressed={panMode} onClick={() => setPanMode(true)} className={`px-3 rounded ${panMode ? 'bg-blue-600' : ''}`}>Pan</button>
-          <button aria-label="Zoom out" onClick={() => setZoom(zoom / 1.3)} className="px-3">−</button>
-          <button aria-label="Zoom in" onClick={() => setZoom(zoom * 1.3)} className="px-3">+</button>
-          <button onClick={resetView} className="px-3 whitespace-nowrap">Fit view</button>
+          <button aria-label="Zoom out" onClick={() => changeZoom(zoom / 1.3)} className="px-3">−</button>
+          <button aria-label="Zoom in" onClick={() => changeZoom(zoom * 1.3)} className="px-3">+</button>
+          <button onClick={() => {
+            automaticMobileView.current = false;
+            if (zoom <= 1.05 && mobileView.zoom > 1.15) {
+              setZoom(mobileView.zoom); setPan(mobileView.panX, 0);
+            } else resetView();
+          }} className="px-3 whitespace-nowrap">{zoom <= 1.05 && mobileView.zoom > 1.15 ? 'Detail view' : 'Fit view'}</button>
         </div>
         <p className="absolute top-20 left-3 right-3 text-center text-xs text-gray-400 pointer-events-none">
-          {panMode ? 'Drag to pan · Pinch to zoom' : 'Tap to select · Drag to move · Use Pan to zoom'}
+          {panMode ? (getPanLimits().maxPanX > 0 ? 'Swipe left or right · Pinch to zoom · Edit to move devices' : 'Pinch to zoom · Edit to move devices') : 'Tap to select · Drag to move · Use Pan to scroll'}
         </p>
-        <div className="absolute bottom-16 left-4 right-4 text-center">
+        {getPanLimits().maxPanX > 0 && <div className="absolute bottom-16 left-4 right-4 flex items-center gap-3 text-xs text-gray-400">
+          <span>Left</span>
+          <input type="range" aria-label="Horizontal rack position" min={-getPanLimits().maxPanX} max={getPanLimits().maxPanX} step="any"
+            value={Math.max(-getPanLimits().maxPanX, Math.min(getPanLimits().maxPanX, -panX))}
+            onChange={e => { automaticMobileView.current = false; setPan(-Number(e.target.value), panY); }}
+            className="flex-1 min-w-0 h-11 accent-blue-500" />
+          <span>Right</span>
+        </div>}
+        <div className="absolute bottom-4 left-4 right-24 text-center">
           {allDevices.length === 0 ? <div className="space-y-2">
-            <p className="text-sm text-gray-300">Start your rack by adding a device.</p>
             <button onClick={onAddDevice} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Add devices</button>
           </div> : selectedDeviceId ? <button onClick={onEditDevice} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Edit selected device</button> : null}
         </div>
